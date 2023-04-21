@@ -18,7 +18,7 @@ async def write_data(user_id):
 async def get_employment_list(user_id, mode=1) -> KeyboardButton or InlineKeyboardButton:
 
   if mode == 1:
-    with open('data\default\default_employment_list.txt', 'r', encoding="utf-8") as file:
+    with open('data/default/default_employment_list.txt', 'r', encoding="utf-8") as file:
       KeyboardButtons = []
       data = file.readlines()
       for line in data:
@@ -52,7 +52,7 @@ async def set_new_employment(user_id, employment):
     f = open(f"./data/users/{user_id}/employment_list.txt", "w", encoding="utf-8")
     f.close()
   
-  with open('data\default\default_employment_list.txt', 'r', encoding="utf-8") as file:
+  with open('data/default/default_employment_list.txt', 'r', encoding="utf-8") as file:
     data = file.readlines()
     for line in data:
       if employment + "\n" in data:
