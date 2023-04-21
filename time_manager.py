@@ -5,8 +5,8 @@ import json
 from datetime import datetime
 
 async def write_data(user_id):
-  if not os.path.exists(f'.\\data\\users\\{user_id}\\data.json'):
-    os.makedirs(f".\\data\\users\\{user_id}\\")
+  if not os.path.exists(f'./data/users/{user_id}/data.json'):
+    os.makedirs(f"./data/users/{user_id}/")
     with open(f'./data/users/{user_id}/data.json', 'w', encoding="utf-8") as file:
       file.write('{}')
   if not os.path.exists(f"./data/users/{user_id}/Temp"):
@@ -24,10 +24,10 @@ async def get_employment_list(user_id, mode=1) -> KeyboardButton or InlineKeyboa
       for line in data:
         KeyboardButtons.append(KeyboardButton(f'{line}'))
 
-  if os.path.exists(f'.\\data\\users\\{user_id}\\employment_list.txt'):
+  if os.path.exists(f'./data/users/{user_id}/employment_list.txt'):
     if mode == 2:
       InlineKeyboardButtons = []
-    with open(f'.\\data\\users\\{user_id}\\employment_list.txt', 'r', encoding="utf-8") as file:
+    with open(f'./data/users/{user_id}/employment_list.txt', 'r', encoding="utf-8") as file:
       data = file.readlines()
       if len(data) == 0 and mode != 1:
         return False
@@ -48,7 +48,7 @@ async def get_employment_list(user_id, mode=1) -> KeyboardButton or InlineKeyboa
     return InlineKeyboardButtons
 
 async def set_new_employment(user_id, employment):
-  if not os.path.exists(f'.\\data\\users\\{user_id}\\employment_list.txt'):
+  if not os.path.exists(f'./data/users/{user_id}/employment_list.txt'):
     f = open(f"./data/users/{user_id}/employment_list.txt", "w", encoding="utf-8")
     f.close()
   
