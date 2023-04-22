@@ -3,6 +3,7 @@ from aiogram.types import KeyboardButton, InlineKeyboardButton
 import os
 import json
 from datetime import datetime
+from pytz import timezone
 
 async def write_data(user_id):
   if not os.path.exists(f'./data/users/{user_id}/data.json'):
@@ -99,7 +100,8 @@ async def animate_message_loading(bot, message, text, count=2):
 
 
 async def startRecording(user_id, employment, isMessageEdit=False):
-  current_time = datetime.now().strftime("%S-%M-%H-%d")
+  moscow_tz = timezone('Europe/Moscow')
+  current_time = datetime.now(moscow_tz).strftime("%S-%M-%H-%d-%m-%Y") # Секунды, минуты, часы, день месяца, месяц, год
   with open(f'./data/users/{user_id}/data.json', 'r', encoding="utf-8") as file:
       data = json.load(file)
       count = 0
@@ -174,7 +176,8 @@ async def startRecording(user_id, employment, isMessageEdit=False):
 
 
 async def stopRecording(user_id, employment):
-  current_time = datetime.now().strftime("%S-%M-%H-%d")
+  moscow_tz = timezone('Europe/Moscow')
+  current_time = datetime.now(moscow_tz).strftime("%S-%M-%H-%d-%m-%Y") # Секунды, минуты, часы, день месяца, месяц, год
   with open(f'./data/users/{user_id}/data.json', 'r', encoding="utf-8") as file:
     data = json.load(file)
     count = 0
@@ -236,8 +239,8 @@ async def calc_time(time_interval, mode=1):
     return False
   startTime = time_interval[0].split("-")
   stopTime = time_interval[1].split("-")
-  startTime_sec, startTime_min, startTime_hours, startTime_day   = [int(i) for i in startTime]
-  stopTime_sec, stopTime_min, stopTime_hours, stopTime_day       = [int(i) for i in stopTime]
+  startTime_sec, startTime_min, startTime_hours, startTime_day, startTime_month, startTime_year   = [int(i) for i in startTime]
+  stopTime_sec, stopTime_min, stopTime_hours, stopTime_day, stopTime_month, stopTime_year         = [int(i) for i in stopTime]
 
   total_start_sec  = startTime_hours * 3600 + startTime_min * 60 + startTime_sec
   total_stop_sec   = stopTime_hours * 3600 + stopTime_min * 60 + stopTime_sec
@@ -290,7 +293,7 @@ async def get_day_info(user_id, day=0):
         for i in range(1, 10):
           if uniq_employment + f"_{i}" in employment:
             employment_sum.append(employment)
-      # На данном моменте мы получаем ключи всех занятий с 1м названием
+      # На данном моменте мы получаем ключи всех занятий
       employment_summTimeInSecconds = 0
       for employment in employment_sum:
         time_interval = curr_day[employment]
