@@ -42,7 +42,8 @@ async def get_employment_list(user_id, mode=1) -> KeyboardButton or InlineKeyboa
             text=f'{line.strip()}',
             callback_data=f'delete-{line.strip()}'
           ))
-
+  elif mode == 2:
+    return False
   if mode == 1:
     return KeyboardButtons
   else:
