@@ -103,13 +103,18 @@ async def animate_message_loading(bot, message, text, count=2):
 async def startRecording(user_id, employment, isMessageEdit=False):
   moscow_tz = timezone('Europe/Moscow')
   current_time = datetime.now(moscow_tz).strftime("%S-%M-%H-%d-%m-%Y") # Секунды, минуты, часы, день месяца, месяц, год
-  with open(f'./data/users/{user_id}/data.json', 'r', encoding="utf-8") as file:
+  # Получаем ластовый datajson file
+  current_jsonfile = "data.json"
+  number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-1
+  if number_of_jsonfile > 1:
+    current_jsonfile = f"data_{number_of_jsonfile-1}.json"
+  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8") as file:
       data = json.load(file)
       count = 0
       for days in data:
         count += 1
       try:
-        with open(f'./data/users/{user_id}/data.json', 'w', encoding="utf-8") as file:
+        with open(f'./data/users/{user_id}/{current_jsonfile}', 'w', encoding="utf-8") as file:
           _count = 1
           if not "1" in data:
             day = {}
@@ -173,64 +178,82 @@ async def startRecording(user_id, employment, isMessageEdit=False):
             data[f"{count + 1}"] = day
           return json.dump(data, file, indent=2, ensure_ascii=False)
       except:
+        print("[ERROR IN MAIN FUNC startRecording]")
         return json.dump(data, file, indent=2, ensure_ascii=False)
 
 
-async def stopRecording(user_id, employment):
+async def stopRecording(user_id):
   moscow_tz = timezone('Europe/Moscow')
   current_time = datetime.now(moscow_tz).strftime("%S-%M-%H-%d-%m-%Y") # Секунды, минуты, часы, день месяца, месяц, год
-  with open(f'./data/users/{user_id}/data.json', 'r', encoding="utf-8") as file:
+  # Получаем ластовый datajson file
+  current_jsonfile = "data.json"
+  number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-1
+  if number_of_jsonfile > 1:
+    current_jsonfile = f"data_{number_of_jsonfile-1}.json"
+  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8") as file:
     data = json.load(file)
     count = 0
     for days in data:
       count += 1
     try:
-      with open(f'./data/users/{user_id}/data.json', 'w', encoding="utf-8") as file:
+      with open(f'./data/users/{user_id}/{current_jsonfile}', 'w', encoding="utf-8") as file:
         if count != 0:
           day = data[f"{count}"]
         else:
           day = data[f"{count + 1}"]
         
-        _count = 0
-        if not employment + "_1" in day:
-          if len(day[employment]) == 2:
-            json.dump(data, file, indent=2, ensure_ascii=False)
-            return False
-          day[employment].append(current_time)
-          time_interval = day[employment]
-          # Перенос на новый день
-          start_day = day[employment][0].split("-")[3]
-          end_day = day[employment][1].split("-")[3]
-          if start_day != end_day:
-            data[count + 1] = {employment: day[employment]}
+        # Получаем ластовый employment
+        employment = list(day.keys())[-1]
+
+        employment_number = ""
+        if "_" in employment:
+          employment, employment_number = employment.split("_")
+          full_employment = employment + "_" + employment_number
+        else:
+          full_employment = employment
+
+        if len(day[full_employment]) == 2:
+          json.dump(data, file, indent=2, ensure_ascii=False)
+          return False
+        day[full_employment].append(current_time)
+        time_interval = day[full_employment]
+        # Перенос на новый день // неделю
+        start_day, start_week_day = day[full_employment][0].split("-")[3], day[full_employment][0]
+        end_day, stop_week_day = day[full_employment][1].split("-")[3], day[full_employment][1]
+
+        date_object = datetime.strptime(start_week_day, "%S-%M-%H-%d-%m-%Y")
+        start_week_day = date_object.weekday()
+        date_object = datetime.strptime(stop_week_day, "%S-%M-%H-%d-%m-%Y")
+        stop_week_day = date_object.weekday()
+
+        if start_week_day != stop_week_day and stop_week_day == 0:
+          if count != 0:
+            data[f"{count}"] = day
+          else:
+            data[f"{count + 1}"] = day
+          json.dump(data, file, indent=2, ensure_ascii=False)
+          number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-1
+          with open(f'./data/users/{user_id}/data_{number_of_jsonfile}.json', 'w', encoding="utf-8") as file:
+            data = {}
+            data["1"] = {employment: time_interval}
             json.dump(data, file, indent=2, ensure_ascii=False)
             return time_interval
+
+        elif start_day != end_day:
+          data[count + 1] = {employment: time_interval}
+          json.dump(data, file, indent=2, ensure_ascii=False)
+          return time_interval
+        
         else:
-          while True:
-            if employment + f"_{_count+1}" in day:
-              _count += 1
-            else:
-              break
-          if len(day[f"{employment}_{_count}"]) == 2:
-            json.dump(data, file, indent=2, ensure_ascii=False)
-            return False
-          day[f"{employment}_{_count}"].append(current_time)
-          time_interval = day[f"{employment}_{_count}"]
-          # Перенос на новый день
-          start_day = day[f"{employment}_{_count}"][0].split("-")[3]
-          end_day = day[f"{employment}_{_count}"][1].split("-")[3]
-          if day[f"{employment}_{_count}"][0].split("-")[3] != day[f"{employment}_{_count}"][1].split("-")[3]:
-            data[count + 1] = {employment: day[f"{employment}_{_count}"]}
-            json.dump(data, file, indent=2, ensure_ascii=False)
-            return time_interval
-        if count != 0:
-          data[f"{count}"] = day
-        else:
-          data[f"{count + 1}"] = day
-        json.dump(data, file, indent=2, ensure_ascii=False)
-      return time_interval
+          if count != 0:
+            data[f"{count}"] = day
+          else:
+            data[f"{count + 1}"] = day
+          json.dump(data, file, indent=2, ensure_ascii=False)
+          return time_interval
+
     except:
-      print("ОШИБКА!")
+      print("[ERROR IN MAIN FUNC stopRecording]")
       json.dump(data, file, indent=2, ensure_ascii=False)
       return False
 
@@ -269,7 +292,12 @@ async def get_day_info(user_id, day=0):
     return [False, False]
 
   result_message = ""
-  with open(f'./data/users/{user_id}/data.json', 'r', encoding="utf-8") as file:
+  # Получаем ластовый datajson file
+  current_jsonfile = "data.json"
+  number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-1
+  if number_of_jsonfile > 1:
+    current_jsonfile = f"data_{number_of_jsonfile-1}.json"
+  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8") as file:
     data = json.load(file)
     if len(data) == 0:
       return [False, False]
@@ -278,7 +306,10 @@ async def get_day_info(user_id, day=0):
     last_day = str(len(data))
     curr_day = data[last_day]
     if day:
-      curr_day = data[str(day)]
+      try:
+        curr_day = data[str(day)]
+      except:
+        return [False, False]
 
     # Сбор уникальных занятий
     uniq_employments = []
@@ -319,3 +350,7 @@ async def get_day_info(user_id, day=0):
       result_message += f"\nЗанятие \"{employment}\" заняло {time_difference}\n"
 
     return [result_message, int(last_day)]
+
+# Для разработки
+if __name__ == "__main__":
+  asyncio.run(stopRecording(1925481166))

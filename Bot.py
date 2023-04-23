@@ -14,10 +14,10 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 
 storage = MemoryStorage()
 
-# PROXY_URL = "http://proxy.server:3128"
-# bot = Bot(API_TOKEN, proxy=PROXY_URL)
+PROXY_URL = "http://proxy.server:3128"
+bot = Bot(API_TOKEN, proxy=PROXY_URL)
 
-bot = Bot(API_TOKEN)
+# bot = Bot(API_TOKEN)
 dispatcher = Dispatcher(bot, storage=storage)
 
 class ClientStatesGroup(StatesGroup):
@@ -45,7 +45,7 @@ def getKeyboard(keyboardButtons, mode=1) -> ReplyKeyboardMarkup:
 def removeKeyboard() -> ReplyKeyboardRemove:
   return ReplyKeyboardRemove(True)
 
-# INLINE KEYBOARDЖ
+# INLINE KEYBOARD:
 def setInlineKeyboard(InlineKeyboardButtons, mode=1) -> InlineKeyboardMarkup:
   keyboard = InlineKeyboardMarkup()
   if mode == 1:
@@ -59,6 +59,23 @@ def setInlineKeyboard(InlineKeyboardButtons, mode=1) -> InlineKeyboardMarkup:
 
 
 # =============================ОБРАБОТЧИКИ КОМАНД БОТА=============================
+# Режим разработчика
+isDevelopment = False
+# @dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
+# async def allert(message: types.Message):
+#   with open("./data/blacklist.txt", "r") as file:
+#     data = file.readlines()
+#     for line in data:
+#       if line == "\n":
+#         continue
+#       elif line.strip() == str(message.from_user.id):
+#         return
+#   await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
+#   with open("./data/blacklist.txt", "a") as file:
+#     file.write(f"\n{message.from_user.id}")
+#   await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set")
+# Режим разработчика
+
 @dispatcher.message_handler(lambda message: message.text != "/start", state=[None])
 async def hello(message: types.Message):
   await message.answer('Для того, чтобы начать, введи:\n/start')
@@ -84,7 +101,7 @@ async def start(message: types.Message):
   await main_functions.write_data(message.from_user.id)
   await ClientStatesGroup.Start.set()
 
-@dispatcher.message_handler(commands=["help", "menu", "about", "info", "info_1", "info_2", "info_3", "info_4", "info_5", "info_6", "start_task_recording"], state="*")
+@dispatcher.message_handler(commands=["help", "menu", "about", "info", "info_1", "info_2", "info_3", "info_4", "info_5", "info_6", "info_7", "start_task_recording"], state="*")
 async def commands(message: types.Message, state: FSMContext):
   if message.text == "/start_task_recording":
     curr_state = await state.get_state()
@@ -132,7 +149,9 @@ async def commands(message: types.Message, state: FSMContext):
         await asyncio.sleep(1)
         await message.answer(text=f"Также вам доступна статистика за прошедшие дни:\n{more_info_message}")
     else:
-      curr_day = int(message.text.replace("/info_", "").strip())
+      if not "_" in message.text:
+        return await message.answer(text="Некорректная форма записи /info!\nСинтаксис (правильное написание) данной команды вы можете посмотреть:\n/help")
+      curr_day = int(message.text.split("_")[1].strip())
       result_message, count_days = await main_functions.get_day_info(message.from_user.id, curr_day)
       if result_message == False and count_days == False:
         await message.answer(text="Невозможно показать статистику, так как у меня отсутствуют ваши данные!")
@@ -150,22 +169,22 @@ async def commands(message: types.Message, state: FSMContext):
 
       if count_days == curr_day:
         await message.answer(text=f"Ваша статистика за сегодня:\n{result_message}")
-        if result_message != "":
+        if more_info_message != "":
           await asyncio.sleep(0.5)
           await message.answer(text=f"Также вам доступна статистика за другие дни:\n{more_info_message}")
       elif count_days-1 == curr_day:
         await message.answer(text=f"Ваша статистика за вчера:\n{result_message}")
-        if result_message != "":
+        if more_info_message != "":
           await asyncio.sleep(0.5)
           await message.answer(text=f"Также вам доступна статистика за другие дни:\n{more_info_message}")
       elif count_days-2 == curr_day:
         await message.answer(text=f"Ваша статистика за позавчера:\n{result_message}")
-        if result_message != "":
+        if more_info_message != "":
           await asyncio.sleep(0.5)
           await message.answer(text=f"Также вам доступна статистика за другие дни:\n{more_info_message}")
       else:
         await message.answer(text=f"Ваша статистика за {curr_day} день записи:\n{result_message}")
-        if result_message != "":
+        if more_info_message != "":
           await asyncio.sleep(0.5)
           await message.answer(text=f"Также вам доступна статистика за другие дни:\n{more_info_message}")
 
@@ -365,8 +384,7 @@ async def callback_onRecording_employment(callback: types.CallbackQuery, state: 
     data = await state.get_data("buffer_inline_message")
     inline_message_id = data["buffer_inline_message"]["message_id"]
     await bot.edit_message_reply_markup(chat_id=chat_id, message_id=inline_message_id, reply_markup=None)
-    employment = callback["message"]["text"][16:]
-    time_interval = await main_functions.stopRecording(user_id=chat_id, employment=employment)
+    time_interval = await main_functions.stopRecording(user_id=chat_id)
     if time_interval:
       time_difference = await main_functions.calc_time(time_interval)
       await bot.send_message(chat_id=chat_id, text=f"Дело завершено!\nВремя, затраченное на него у вас составило: {time_difference}")
@@ -420,13 +438,27 @@ async def send_alerts(message):
       continue
 
 async def on_startup(_):
-  message = "Меня починили!"
-  return await send_alerts(message=message)
+  await bot.send_message(ADMIN_ID, text="bot starting!", reply_markup=removeKeyboard())
+  global isDevelopment
+  if not isDevelopment:
+    message = "Меня починили!"
+    return await send_alerts(message=message)
+  else:
+    with open("./data/blacklist.txt", "w") as file:
+      file.close()
 
 async def on_shutdown(_):
-  message = "Бот находится на технической паузе, приймите извинения за неудобства!"
-  return await send_alerts(message=message)
-
+  await bot.send_message(ADMIN_ID, text="bot down!", reply_markup=removeKeyboard())
+  global isDevelopment
+  if not isDevelopment:
+    message = "Бот отключен. Вероятнее всего, он находится на технической паузе, приймите извинения за неудобства!"
+    # Останавливаем все занятия
+    users = os.listdir("./data/users")
+    for user in users:
+      await main_functions.stopRecording(user_id=user)
+    return await send_alerts(message=message)
+  else:
+    await main_functions.stopRecording(user_id=ADMIN_ID)
 
 if __name__ == "__main__":
   executor.start_polling(dispatcher=dispatcher, skip_updates=True, on_startup=on_startup, on_shutdown=on_shutdown)

@@ -67,7 +67,12 @@ async def create_statistick(user_id, paint_over_between=False):
   colors = ["#fd33d2", "#c8c49e", "#ec1300", "#2cc960", "#9fc926", "#5997e6", "#a8c2bc", "#f58642", "#72f499", "#4b113b", "#e6878a", "#c6e65d", "#c6e65d", "#3bf2e6", "#021b05", "#cf240f", "#dcf49d", "#b72fb2"]
   
   barh_left = 0
-  with open(f'./data/users/{user_id}/data.json', 'r', encoding="utf-8") as file:
+  # Получаем ластовый datajson file
+  current_jsonfile = "data.json"
+  number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-1
+  if number_of_jsonfile > 1:
+    current_jsonfile = f"data_{number_of_jsonfile-1}.json"
+  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8") as file:
     data = json.load(file)
     curr_week_day = data["1"][list(data["1"].keys())[0]][0]
     date_object = datetime.strptime(curr_week_day, "%S-%M-%H-%d-%m-%Y")
@@ -179,5 +184,6 @@ async def create_statistick(user_id, paint_over_between=False):
   plt.savefig(f"./data/users/{user_id}/Temp/statistic.jpg", dpi=340)
   return True
 
+# Для разработки
 if __name__ == "__main__":
   asyncio.run(create_statistick(1925481166))
