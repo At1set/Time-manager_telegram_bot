@@ -14,10 +14,10 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 
 storage = MemoryStorage()
 
-PROXY_URL = "http://proxy.server:3128"
-bot = Bot(API_TOKEN, proxy=PROXY_URL)
+# PROXY_URL = "http://proxy.server:3128"
+# bot = Bot(API_TOKEN, proxy=PROXY_URL)
 
-# bot = Bot(API_TOKEN)
+bot = Bot(API_TOKEN)
 dispatcher = Dispatcher(bot, storage=storage)
 
 class ClientStatesGroup(StatesGroup):
@@ -61,19 +61,20 @@ def setInlineKeyboard(InlineKeyboardButtons, mode=1) -> InlineKeyboardMarkup:
 # =============================ОБРАБОТЧИКИ КОМАНД БОТА=============================
 # Режим разработчика
 isDevelopment = False
-# @dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
-# async def allert(message: types.Message):
-#   with open("./data/blacklist.txt", "r") as file:
-#     data = file.readlines()
-#     for line in data:
-#       if line == "\n":
-#         continue
-#       elif line.strip() == str(message.from_user.id):
-#         return
-#   await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
-#   with open("./data/blacklist.txt", "a") as file:
-#     file.write(f"\n{message.from_user.id}")
-#   await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set")
+isDevelopment = True
+@dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
+async def allert(message: types.Message):
+  with open("./data/blacklist.txt", "r") as file:
+    data = file.readlines()
+    for line in data:
+      if line == "\n":
+        continue
+      elif line.strip() == str(message.from_user.id):
+        return
+  await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
+  with open("./data/blacklist.txt", "a") as file:
+    file.write(f"\n{message.from_user.id}")
+  await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set")
 # Режим разработчика
 
 @dispatcher.message_handler(lambda message: message.text != "/start", state=[None])
@@ -306,7 +307,9 @@ async def delete_employment(message: types.Message):
 @dispatcher.message_handler(commands=["exit"], state=[ClientStatesGroup.Recording_time, ClientStatesGroup.Recording_time_editmessage, ClientStatesGroup.Start])
 async def exit_from_state(message: types.Message, state: FSMContext):
   await message.delete()
-  await bot.send_message(message.from_user.id, text='Вы вышли из режима записи. Не волнуйтесь, все ваши действия сохранятся.', reply_markup=removeKeyboard())
+  # await main_functions.stopRecording(user_id=message.from_user.id)
+  await callback_onRecording_employment(callback=None, state=state)
+  await bot.send_message(message.from_user.id, text='Вы вышли из режима записи. .', reply_markup=removeKeyboard())
 
   return await state.finish()
 # =================================================================================
@@ -379,7 +382,7 @@ async def callback_onSetting_new_employment(callback: types.CallbackQuery, state
 
 @dispatcher.callback_query_handler(state=ClientStatesGroup.Recording_employment)
 async def callback_onRecording_employment(callback: types.CallbackQuery, state: FSMContext):
-  if callback.data == "break":
+  if callback == None or callback.data == "break":
     chat_id = callback.message.chat.id
     data = await state.get_data("buffer_inline_message")
     inline_message_id = data["buffer_inline_message"]["message_id"]

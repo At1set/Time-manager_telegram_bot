@@ -12,6 +12,9 @@ async def write_data(user_id):
       file.write('{}')
   if not os.path.exists(f"./data/users/{user_id}/Temp"):
     os.mkdir(f"./data/users/{user_id}/Temp")
+  if not os.path.exists(f"./data/users/{user_id}/properties.txt"):
+    with open(f"./data/users/{user_id}/properties.txt", "w") as file:
+      file.close()
     return
   else:
     return
@@ -105,7 +108,7 @@ async def startRecording(user_id, employment, isMessageEdit=False):
   current_time = datetime.now(moscow_tz).strftime("%S-%M-%H-%d-%m-%Y") # Секунды, минуты, часы, день месяца, месяц, год
   # Получаем ластовый datajson file
   current_jsonfile = "data.json"
-  number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-1
+  number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
   if number_of_jsonfile > 1:
     current_jsonfile = f"data_{number_of_jsonfile-1}.json"
   with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8") as file:
@@ -187,7 +190,7 @@ async def stopRecording(user_id):
   current_time = datetime.now(moscow_tz).strftime("%S-%M-%H-%d-%m-%Y") # Секунды, минуты, часы, день месяца, месяц, год
   # Получаем ластовый datajson file
   current_jsonfile = "data.json"
-  number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-1
+  number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
   if number_of_jsonfile > 1:
     current_jsonfile = f"data_{number_of_jsonfile-1}.json"
   with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8") as file:
@@ -226,13 +229,14 @@ async def stopRecording(user_id):
         date_object = datetime.strptime(stop_week_day, "%S-%M-%H-%d-%m-%Y")
         stop_week_day = date_object.weekday()
 
-        if start_week_day != stop_week_day and stop_week_day == 0:
+        if len(data) > 1 and stop_week_day == 0:
+          print(len(data))
           if count != 0:
             data[f"{count}"] = day
           else:
             data[f"{count + 1}"] = day
           json.dump(data, file, indent=2, ensure_ascii=False)
-          number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-1
+          number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
           with open(f'./data/users/{user_id}/data_{number_of_jsonfile}.json', 'w', encoding="utf-8") as file:
             data = {}
             data["1"] = {employment: time_interval}
@@ -294,7 +298,7 @@ async def get_day_info(user_id, day=0):
   result_message = ""
   # Получаем ластовый datajson file
   current_jsonfile = "data.json"
-  number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-1
+  number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
   if number_of_jsonfile > 1:
     current_jsonfile = f"data_{number_of_jsonfile-1}.json"
   with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8") as file:
