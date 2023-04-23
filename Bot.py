@@ -3,6 +3,7 @@ from visualizer import create_statistick
 from config import *
 from Api_token import *
 
+import os
 import asyncio
 
 from aiogram import Bot, Dispatcher, executor, types
@@ -12,6 +13,9 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import StatesGroup, State
 
 storage = MemoryStorage()
+
+# PROXY_URL = "http://proxy.server:3128"
+# bot = Bot(API_TOKEN, proxy=PROXY_URL)
 
 bot = Bot(API_TOKEN)
 dispatcher = Dispatcher(bot, storage=storage)
@@ -407,11 +411,21 @@ async def callback_onDeleteing_employment(callback: types.CallbackQuery):
     await bot.send_message(chat_id=callback.from_user.id, text="Ожидание ввода...", reply_markup=getKeyboard(keyboardButtons, mode=2))
     return await ClientStatesGroup.Recording_time.set()
 
+async def send_alerts(message):
+  users = os.listdir("./data/users")
+  for user in users:
+    try:
+      await bot.send_message(user, text=message, reply_markup=removeKeyboard())
+    except:
+      continue
+
 async def on_startup(_):
-  return await bot.send_message(ADMIN_ID, text="bot_started")
+  message = "Меня починили!"
+  return await send_alerts(message=message)
 
 async def on_shutdown(_):
-  return await bot.send_message(ADMIN_ID, text="bot_down", reply_markup=removeKeyboard())
+  message = "Бот находится на технической паузе, приймите извинения за неудобства!"
+  return await send_alerts(message=message)
 
 
 if __name__ == "__main__":

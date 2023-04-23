@@ -84,13 +84,16 @@ async def create_statistick(user_id, paint_over_between=False):
     legend_labels = set()
     if paint_over_between:
       space_label_limit = True
-    for i in range(curr_week_day+1, 8):
-      curr_day = data[str(i-curr_week_day)]
+    for i in range(curr_week_day+1, curr_week_day+len(data)+1):
+      if i > 7:
+        break
+      curr_day = data[str(i-curr_week_day)] # 1, 2, 3, 4...
 
       for employment in curr_day:
         time_interval = curr_day[employment]
 
         space_left = barh_left
+        limit_different = xMax - barh_left
 
         # Получаем barh_left
         stopTime_day = int(time_interval[1].split("-")[3])
@@ -114,6 +117,8 @@ async def create_statistick(user_id, paint_over_between=False):
           continue
 
         result_hours = time_interval/3600
+        if stopTime_day != startTime_day and number_of_employment == 0: # Отнимаем разницу при переходе на новый день
+          result_hours -= limit_different
 
         barh_width = result_hours
         barh_height = 0.8
@@ -155,7 +160,10 @@ async def create_statistick(user_id, paint_over_between=False):
         if difference_hours == 0 and difference_min == 0:
           continue
         elif difference_hours == 0:
-          plt.bar_label(bar, label_type="center", zorder=10, labels=[f"{difference_min}м,{difference_sec}с"], color=label_color, rotation=90, fontweight="bold")
+          if difference_min > 8:
+            plt.bar_label(bar, label_type="center", zorder=10, labels=[f"{difference_min}м,{difference_sec}с"], color=label_color, rotation=90, fontweight="bold")
+          else:
+            continue
         else:
           if difference_min > 0:
             plt.bar_label(bar, label_type="center", zorder=10, labels=[f"{difference_hours}ч,{difference_min}м"], color=label_color, fontweight="bold")
