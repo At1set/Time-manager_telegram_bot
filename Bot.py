@@ -14,15 +14,16 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 
 storage = MemoryStorage()
 
-# PROXY_URL = "http://proxy.server:3128"
-# bot = Bot(API_TOKEN, proxy=PROXY_URL)
+PROXY_URL = "http://proxy.server:3128"
+bot = Bot(API_TOKEN, proxy=PROXY_URL)
 
-bot = Bot(API_TOKEN)
+# bot = Bot(API_TOKEN)
 dispatcher = Dispatcher(bot, storage=storage)
 
 class ClientStatesGroup(StatesGroup):
   Start = State()
   Wait = State()
+  StartOptions = State()
   Recording_time = State()
   Recording_time_editmessage = State()
   Recording_employment = State()
@@ -61,31 +62,29 @@ def setInlineKeyboard(InlineKeyboardButtons, mode=1) -> InlineKeyboardMarkup:
 # =============================ОБРАБОТЧИКИ КОМАНД БОТА=============================
 # Режим разработчика
 isDevelopment = False
-isDevelopment = True
-@dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
-async def allert(message: types.Message):
-  with open("./data/blacklist.txt", "r") as file:
-    data = file.readlines()
-    for line in data:
-      if line == "\n":
-        continue
-      elif line.strip() == str(message.from_user.id):
-        return
-  await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
-  with open("./data/blacklist.txt", "a") as file:
-    file.write(f"\n{message.from_user.id}")
-  await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set")
+# isDevelopment = True
+# @dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
+# async def allert(message: types.Message):
+#   with open("./data/blacklist.txt", "r") as file:
+#     data = file.readlines()
+#     for line in data:
+#       if line == "\n":
+#         continue
+#       elif line.strip() == str(message.from_user.id):
+#         return
+#   await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
+#   with open("./data/blacklist.txt", "a") as file:
+#     file.write(f"\n{message.from_user.id}")
+#   await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set")
 # Режим разработчика
 
 @dispatcher.message_handler(lambda message: message.text != "/start", state=[None])
 async def hello(message: types.Message):
   await message.answer('Для того, чтобы начать, введи:\n/start')
 
-
-@dispatcher.message_handler(state=[ClientStatesGroup.Wait, ClientStatesGroup.Setting_new_employment, ClientStatesGroup.Recording_employment, ClientStatesGroup.Deleteing_employment])
+@dispatcher.message_handler(lambda message: message.text != "/exit", state=[ClientStatesGroup.Wait, ClientStatesGroup.Setting_new_employment, ClientStatesGroup.Recording_employment, ClientStatesGroup.Deleteing_employment])
 async def waiting(message: types.Message):
   await message.delete()
-
 
 @dispatcher.message_handler(commands=["start"], state=None)
 async def start(message: types.Message):
@@ -102,9 +101,9 @@ async def start(message: types.Message):
   await main_functions.write_data(message.from_user.id)
   await ClientStatesGroup.Start.set()
 
-@dispatcher.message_handler(commands=["help", "menu", "about", "info", "info_1", "info_2", "info_3", "info_4", "info_5", "info_6", "info_7", "start_task_recording"], state="*")
+@dispatcher.message_handler(commands=["help", "menu", "about", "info", "info_1", "info_2", "info_3", "info_4", "info_5", "info_6", "info_7", "start_task_recording", "options"], state=[ClientStatesGroup.Start, ClientStatesGroup.Wait, ClientStatesGroup.Recording_time, ClientStatesGroup.Recording_employment, ClientStatesGroup.Getting_new_employment, ClientStatesGroup.Setting_new_employment, ClientStatesGroup.Deleteing_employment])
 async def commands(message: types.Message, state: FSMContext):
-  if message.text == "/start_task_recording":
+  if message.text == "/start_task_recording" or message.text == "/options" or message.text == "/help":
     curr_state = await state.get_state()
 
   if message.text == "/menu":
@@ -118,7 +117,7 @@ async def commands(message: types.Message, state: FSMContext):
     await bot.send_message(message.from_user.id, text=MESSAGE__HELP_3, parse_mode="HTML")
     await asyncio.sleep(5)
     await bot.send_message(message.from_user.id, text=MESSAGE__HELP_4, parse_mode="HTML")
-    await ClientStatesGroup.Start.set()
+    await state.set_state(curr_state)
 
   elif message.text == "/about":
     await bot.send_message(message.from_user.id, text=MESSAGE__ABOUT, parse_mode="HTML")
@@ -190,7 +189,7 @@ async def commands(message: types.Message, state: FSMContext):
           await message.answer(text=f"Также вам доступна статистика за другие дни:\n{more_info_message}")
 
   elif (message.text == "/start_task_recording"):
-    if curr_state != "ClientStatesGroup:Recording_time" and curr_state != "ClientStatesGroup:Recording_time_editmessage":
+    if curr_state != "ClientStatesGroup:Recording_time":
       # отправляем сообщение
       await ClientStatesGroup.Wait.set()
       await main_functions.animate_message_loading(bot=bot, message=message, text="Включаю режим записи")
@@ -216,6 +215,35 @@ async def commands(message: types.Message, state: FSMContext):
       await bot.send_message(message.from_user.id, text="Ожидание ввода...", reply_markup=getKeyboard(keyboardButtons, mode=2))
       await ClientStatesGroup.Recording_time.set()
 
+  elif (message.text == "/options"):
+    if curr_state != "ClientStatesGroup:Recording_time":
+      await ClientStatesGroup.StartOptions.set()
+      await bot.send_message(message.from_user.id, text=MESSAGE__OPTIONS, parse_mode="HTML", reply_markup=setInlineKeyboard(InlineKeyboardButtons=InlineKeyboardButton("Закрыть", callback_data=message.message_id)))
+    else:
+      await message.answer(text="Меню настроек нельзя вызывать в режиме записи. Если вам надо открыть настройки, выйдите из режима зависи с помощью:\n/exit")
+
+@dispatcher.message_handler(state=ClientStatesGroup.StartOptions)
+async def starting_options(message: types.Message):
+  if message.text == "/default_employment_list":
+    await message.delete()
+    await ClientStatesGroup.Wait.set()
+    # получаем значение
+    user_properties = main_functions.UserProperties(user_id=message.from_user.id, default_value=1)
+    property_value = await user_properties.get("default_employment_list")
+    # меняем на противоположное
+    property_value = 0 if property_value == 1 else 1
+    user_properties = main_functions.UserProperties(user_id=message.from_user.id, default_value=property_value)
+    await user_properties.set("default_employment_list")
+    if property_value == 1:
+      _message = await message.answer(text="Вы включили показ стандартного списка дел!")
+    else:
+      _message = await message.answer(text="Вы отключили показ стандартного списка дел!")
+    await asyncio.sleep(2)
+    await _message.delete()
+    return await ClientStatesGroup.StartOptions.set()
+  else:
+    return await message.delete()
+
 @dispatcher.message_handler(lambda message: not "/" in message.text, state=[ClientStatesGroup.Recording_time, ClientStatesGroup.Recording_time_editmessage])
 async def choice_employment(message: types.Message, state: FSMContext):
   curr_state = await state.get_state()
@@ -223,13 +251,14 @@ async def choice_employment(message: types.Message, state: FSMContext):
   await ClientStatesGroup.Recording_employment.set()
   employment = message.text
   _message = await message.answer(text=f'Начата запись: \n{employment}', reply_markup=setInlineKeyboard([InlineKeyboardButton(text='Изменить', callback_data=message.message_id),
-                                                                                              InlineKeyboardButton(text='Закончить', callback_data="break")],
-                                                                                              mode=2))
+                                                                                                         InlineKeyboardButton(text='Отмена', callback_data=f"exit-{message.message_id}"),
+                                                                                                         InlineKeyboardButton(text='Закончить', callback_data="break")],
+                                                                                                         mode=2))
   await main_functions.startRecording(user_id=message.from_user.id, employment=employment, isMessageEdit=isMessageEdit)
   data = {"buffer_inline_message": _message}
   await state.set_data(data)
 
-@dispatcher.message_handler(commands=["set_new_employment"], state=[ClientStatesGroup.Recording_time, ClientStatesGroup.Recording_time_editmessage])
+@dispatcher.message_handler(commands=["set_new_employment"], state=[ClientStatesGroup.Recording_time])
 async def getting_new_employment_change_state(message: types.Message, state: FSMContext):
   await ClientStatesGroup.Getting_new_employment.set()
   _message = await message.answer(text='Введите новое занятие, для добавления его в список', reply_markup=setInlineKeyboard(InlineKeyboardButton(text='Отмена', callback_data=message.message_id)))
@@ -277,7 +306,7 @@ async def getting_new_employment(message: types.Message, state: FSMContext):
       # Пересылаем обратно сообщение с inline кнопкой "отмена", после всего контента
       _message = await message.answer(text='Введите новое занятие, для добавления его в список', reply_markup=setInlineKeyboard(InlineKeyboardButton(text='Отмена', callback_data=command_message_id)))
       return await state.set_data({"buffer_command_message": command_message, "buffer_inline_message": _message})
-  await ClientStatesGroup.Setting_new_employment.set()    
+  await ClientStatesGroup.Setting_new_employment.set()
   data = await state.get_data("current_message")
   data["current_message"] = message
   await state.set_data(data)
@@ -304,13 +333,21 @@ async def delete_employment(message: types.Message):
 
 
 # ===============================ОБРАБОТЧИК ВЫХОДОВ================================
-@dispatcher.message_handler(commands=["exit"], state=[ClientStatesGroup.Recording_time, ClientStatesGroup.Recording_time_editmessage, ClientStatesGroup.Start])
+@dispatcher.message_handler(commands=["exit"], state=[ClientStatesGroup.Recording_time, ClientStatesGroup.Start, ClientStatesGroup.StartOptions])
 async def exit_from_state(message: types.Message, state: FSMContext):
+  curr_state = await state.get_state()
   await message.delete()
-  # await main_functions.stopRecording(user_id=message.from_user.id)
-  await callback_onRecording_employment(callback=None, state=state)
-  await bot.send_message(message.from_user.id, text='Вы вышли из режима записи. .', reply_markup=removeKeyboard())
-
+  if curr_state == "ClientStatesGroup:Recording_time" or curr_state == "ClientStatesGroup:Recording_time":
+    await ClientStatesGroup.Wait.set()
+    _message = await bot.send_message(message.from_user.id, text='Вы вышли из режима записи.', reply_markup=removeKeyboard())
+    await asyncio.sleep(2)
+    await _message.delete()
+    await asyncio.sleep(0.5)
+    await bot.send_message(message.from_user.id, text=MESSAGE__MAIN_MENU, parse_mode="HTML")
+    return await ClientStatesGroup.Start.set()
+  _message = await bot.send_message(message.from_user.id, text='Выход.', reply_markup=removeKeyboard())
+  await asyncio.sleep(1)
+  await _message.delete()
   return await state.finish()
 # =================================================================================
 
@@ -318,6 +355,18 @@ async def exit_from_state(message: types.Message, state: FSMContext):
 async def callback_onStart(callback: types.CallbackQuery):
   await bot.send_message(callback.from_user.id, text=MESSAGE__MAIN_MENU, parse_mode="HTML")
   await bot.answer_callback_query(callback.id)
+
+@dispatcher.callback_query_handler(state=[ClientStatesGroup.StartOptions])
+async def callback_onStart(callback: types.CallbackQuery):
+  # Удаление сообщения с inline-кнопкой
+  chat_id = callback.message.chat.id
+  message_id = callback.message.message_id
+  await bot.delete_message(chat_id, message_id)
+  
+  # Удаление сообщения с командой
+  message_id = callback.data
+  await bot.delete_message(chat_id, message_id)
+  return await ClientStatesGroup.Start.set()
 
 
 @dispatcher.callback_query_handler(state=ClientStatesGroup.Getting_new_employment)
@@ -382,7 +431,8 @@ async def callback_onSetting_new_employment(callback: types.CallbackQuery, state
 
 @dispatcher.callback_query_handler(state=ClientStatesGroup.Recording_employment)
 async def callback_onRecording_employment(callback: types.CallbackQuery, state: FSMContext):
-  if callback == None or callback.data == "break":
+
+  if callback.data == "break":
     chat_id = callback.message.chat.id
     data = await state.get_data("buffer_inline_message")
     inline_message_id = data["buffer_inline_message"]["message_id"]
@@ -396,7 +446,17 @@ async def callback_onRecording_employment(callback: types.CallbackQuery, state: 
     await asyncio.sleep(2)
     await bot.send_message(chat_id=chat_id, text="Ожидание ввода...")
     return await ClientStatesGroup.Recording_time.set()
+  elif "exit" in callback.data:
+    await main_functions.delete_employment_from_recording(callback.message.chat.id)
+    # Удаление сообщения с inline-кнопкой
+    chat_id = callback.message.chat.id
+    message_id = callback.message.message_id
+    await bot.delete_message(chat_id, message_id)
 
+    # Удаление сообщения с командой
+    message_id = callback.data.split("-")[1]
+    await bot.delete_message(chat_id, message_id)
+    return await ClientStatesGroup.Recording_time.set()
   else:
     # Удаление сообщения с inline-кнопкой
     chat_id = callback.message.chat.id

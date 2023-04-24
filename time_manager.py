@@ -12,25 +12,49 @@ async def write_data(user_id):
       file.write('{}')
   if not os.path.exists(f"./data/users/{user_id}/Temp"):
     os.mkdir(f"./data/users/{user_id}/Temp")
-  if not os.path.exists(f"./data/users/{user_id}/properties.txt"):
-    with open(f"./data/users/{user_id}/properties.txt", "w") as file:
-      file.close()
+  if not os.path.exists(f"./data/users/{user_id}/properties.json"):
+    with open(f"./data/users/{user_id}/properties.json", "w") as file:
+      file.write('{}')
     return
   else:
     return
 
+class UserProperties:
+  def __init__(self, user_id, default_value):
+    self.user_id = user_id
+    self.default_value = default_value
+      
+  async def get(self, property_name):
+    with open(f"./data/users/{self.user_id}/properties.json", "r") as file:
+      data = json.load(file)
+      property_value = data.setdefault(property_name, self.default_value)
+      with open(f"./data/users/{self.user_id}/properties.json", "w") as file:
+        json.dump(data, file, indent=2, ensure_ascii=False)
+    return property_value
+  
+  async def set(self, property_name):
+    with open(f"./data/users/{self.user_id}/properties.json", "r") as file:
+      data = json.load(file)
+      data[property_name] = self.default_value
+      with open(f"./data/users/{self.user_id}/properties.json", "w") as file:
+        json.dump(data, file, indent=2, ensure_ascii=False)
+    return True
+
 async def get_employment_list(user_id, mode=1) -> KeyboardButton or InlineKeyboardButton:
 
   if mode == 1:
+    KeyboardButtons = []
+  if mode == 2:
+    InlineKeyboardButtons = []
+  user_properties = UserProperties(user_id, 1)
+  default_employment_list = await user_properties.get("default_employment_list")
+  if mode == 1 and default_employment_list:
     with open('data/default/default_employment_list.txt', 'r', encoding="utf-8") as file:
-      KeyboardButtons = []
       data = file.readlines()
       for line in data:
         KeyboardButtons.append(KeyboardButton(f'{line}'))
 
   if os.path.exists(f'./data/users/{user_id}/employment_list.txt'):
-    if mode == 2:
-      InlineKeyboardButtons = []
     with open(f'./data/users/{user_id}/employment_list.txt', 'r', encoding="utf-8") as file:
       data = file.readlines()
       if len(data) == 0 and mode != 1:
@@ -157,6 +181,23 @@ async def startRecording(user_id, employment, isMessageEdit=False):
                 return json.dump(data, file, indent=2, ensure_ascii=False)
 
           _count = 1
+          # Перенос на новый день // неделю
+          if len(day) > 1:
+            # Получаем ласт employment
+            last_employment = [*day][len(day)-1]
+            current_week = current_time
+
+            date_object = datetime.strptime(current_week, "%S-%M-%H-%d-%m-%Y")
+            current_week = date_object.weekday()
+
+            if len(data) > 1 and current_week == 0:
+              json.dump(data, file, indent=2, ensure_ascii=False)
+              number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
+              with open(f'./data/users/{user_id}/data_{number_of_jsonfile}.json', 'w', encoding="utf-8") as file:
+                data = {}
+                data["1"] = {employment: [current_time]}
+                return json.dump(data, file, indent=2, ensure_ascii=False)
+
           if not employment in day:
             day[employment] = [current_time]
           else:
@@ -200,6 +241,9 @@ async def stopRecording(user_id):
       count += 1
     try:
       with open(f'./data/users/{user_id}/{current_jsonfile}', 'w', encoding="utf-8") as file:
+        if len(data) == 0:
+          json.dump(data, file, indent=2, ensure_ascii=False)
+          return False
         if count != 0:
           day = data[f"{count}"]
         else:
@@ -221,11 +265,9 @@ async def stopRecording(user_id):
         day[full_employment].append(current_time)
         time_interval = day[full_employment]
         # Перенос на новый день // неделю
-        start_day, start_week_day = day[full_employment][0].split("-")[3], day[full_employment][0]
+        start_day = day[full_employment][0].split("-")[3]
         end_day, stop_week_day = day[full_employment][1].split("-")[3], day[full_employment][1]
 
-        date_object = datetime.strptime(start_week_day, "%S-%M-%H-%d-%m-%Y")
-        start_week_day = date_object.weekday()
         date_object = datetime.strptime(stop_week_day, "%S-%M-%H-%d-%m-%Y")
         stop_week_day = date_object.weekday()
 
@@ -260,6 +302,37 @@ async def stopRecording(user_id):
       print("[ERROR IN MAIN FUNC stopRecording]")
       json.dump(data, file, indent=2, ensure_ascii=False)
       return False
+
+
+async def delete_employment_from_recording(user_id):
+  # Получаем ластовый datajson file
+  current_jsonfile = "data.json"
+  number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
+  if number_of_jsonfile > 1:
+    current_jsonfile = f"data_{number_of_jsonfile-1}.json"
+  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8") as file:
+    data = json.load(file)
+    if len(data) == 0:
+      json.dump(data, file, indent=2, ensure_ascii=False)
+      return False
+    with open(f'./data/users/{user_id}/{current_jsonfile}', 'w', encoding="utf-8") as file:
+      # переходим в ластовый день:
+      last_day_number = list(data.keys())[-1]
+      last_day = data[last_day_number]
+      # переходим в ластовый employment:
+      last_employment = list(last_day.keys())[-1]
+      time_interval = last_day[last_employment]
+      if len(time_interval) == 1:
+        del last_day[last_employment]
+        if len(last_day) == 0:
+          del data[last_day_number]
+        else:
+          data[last_day_number] = last_day
+      else:
+        json.dump(data, file, indent=2, ensure_ascii=False)
+        return False
+      return json.dump(data, file, indent=2, ensure_ascii=False)
+
 
 async def calc_time(time_interval, mode=1):
   if len(time_interval) == 1 or len(time_interval) == 0:
@@ -357,4 +430,5 @@ async def get_day_info(user_id, day=0):
 
 # Для разработки
 if __name__ == "__main__":
-  asyncio.run(stopRecording(1925481166))
+  asyncio.run(delete_employment_from_recording(1925481166))
+  pass

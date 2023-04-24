@@ -78,9 +78,11 @@ MESSAGE__MAIN_MENU = """
 <b>Промежуточные результаты:</b>
 /info
 
+<b>Настройки:</b>
+/options
+
 <b>Запуск бота:</b>
 /start_task_recording
-
 """
 
 MESSAGE__START_TIME_RECORDING = """
@@ -103,4 +105,11 @@ MESSAGE__SET_NEW_EMPLOYMENT = """
 
 Для удаления из списка дел, воспользуйтесь коммандой:
 /delete_employment
+"""
+
+MESSAGE__OPTIONS = """
+<b>================_OPTIONS_================</b>
+
+<b>Показывать/скрыть стандартный список дел:</b>
+/default_employment_list
 """
