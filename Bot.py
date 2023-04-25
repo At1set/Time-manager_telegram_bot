@@ -13,12 +13,10 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import StatesGroup, State
 
 storage = MemoryStorage()
-
 PROXY_URL = "http://proxy.server:3128"
 bot = Bot(API_TOKEN, proxy=PROXY_URL)
-
-# bot = Bot(API_TOKEN)
 dispatcher = Dispatcher(bot, storage=storage)
+
 
 class ClientStatesGroup(StatesGroup):
   Start = State()
@@ -62,20 +60,23 @@ def setInlineKeyboard(InlineKeyboardButtons, mode=1) -> InlineKeyboardMarkup:
 # =============================ОБРАБОТЧИКИ КОМАНД БОТА=============================
 # Режим разработчика
 isDevelopment = False
-# isDevelopment = True
-# @dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
-# async def allert(message: types.Message):
-#   with open("./data/blacklist.txt", "r") as file:
-#     data = file.readlines()
-#     for line in data:
-#       if line == "\n":
-#         continue
-#       elif line.strip() == str(message.from_user.id):
-#         return
-#   await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
-#   with open("./data/blacklist.txt", "a") as file:
-#     file.write(f"\n{message.from_user.id}")
-#   await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set")
+isDevelopment = True
+bot = Bot(API_DEVELOPMENT_TOKEN)
+dispatcher = Dispatcher(bot, storage=storage)
+
+@dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
+async def allert(message: types.Message):
+  with open("./data/blacklist.txt", "r") as file:
+    data = file.readlines()
+    for line in data:
+      if line == "\n":
+        continue
+      elif line.strip() == str(message.from_user.id):
+        return
+  await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
+  with open("./data/blacklist.txt", "a") as file:
+    file.write(f"\n{message.from_user.id}")
+  await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set", )
 # Режим разработчика
 
 @dispatcher.message_handler(lambda message: message.text != "/start", state=[None])
@@ -250,9 +251,9 @@ async def choice_employment(message: types.Message, state: FSMContext):
   isMessageEdit = curr_state == "ClientStatesGroup:Recording_time_editmessage"
   await ClientStatesGroup.Recording_employment.set()
   employment = message.text
-  _message = await message.answer(text=f'Начата запись: \n{employment}', reply_markup=setInlineKeyboard([InlineKeyboardButton(text='Изменить', callback_data=message.message_id),
-                                                                                                         InlineKeyboardButton(text='Отмена', callback_data=f"exit-{message.message_id}"),
-                                                                                                         InlineKeyboardButton(text='Закончить', callback_data="break")],
+  _message = await message.answer(text=f'Начата запись: \n{employment}', reply_markup=setInlineKeyboard([InlineKeyboardButton(text='Изменить ⚙️', callback_data=message.message_id),
+                                                                                                         InlineKeyboardButton(text='Отмена ⛔️', callback_data=f"exit-{message.message_id}"),
+                                                                                                         InlineKeyboardButton(text='Закончить ✅', callback_data="break")],
                                                                                                          mode=2))
   await main_functions.startRecording(user_id=message.from_user.id, employment=employment, isMessageEdit=isMessageEdit)
   data = {"buffer_inline_message": _message}
@@ -261,7 +262,7 @@ async def choice_employment(message: types.Message, state: FSMContext):
 @dispatcher.message_handler(commands=["set_new_employment"], state=[ClientStatesGroup.Recording_time])
 async def getting_new_employment_change_state(message: types.Message, state: FSMContext):
   await ClientStatesGroup.Getting_new_employment.set()
-  _message = await message.answer(text='Введите новое занятие, для добавления его в список', reply_markup=setInlineKeyboard(InlineKeyboardButton(text='Отмена', callback_data=message.message_id)))
+  _message = await message.answer(text='Введите новое занятие, для добавления его в список', reply_markup=setInlineKeyboard(InlineKeyboardButton(text='Отмена ⛔️', callback_data=message.message_id)))
   await state.set_data({"buffer_command_message": message, "buffer_inline_message": _message})
   _message = await message.answer(text='Удаление клавиатуры...', reply_markup=removeKeyboard())
   await asyncio.sleep(0.1)
@@ -285,7 +286,7 @@ async def getting_new_employment(message: types.Message, state: FSMContext):
       message_answer += f"\"{symbol}\" "
     await message.answer(text=f"Символы, которые запрещены в названии:\n{message_answer}")
     # Пересылаем обратно сообщение с inline кнопкой "отмена", после всего контента
-    _message = await message.answer(text='Введите новое занятие, для добавления его в список', reply_markup=setInlineKeyboard(InlineKeyboardButton(text='Отмена', callback_data=command_message_id)))
+    _message = await message.answer(text='Введите новое занятие, для добавления его в список', reply_markup=setInlineKeyboard(InlineKeyboardButton(text='Отмена ⛔️', callback_data=command_message_id)))
     return await state.set_data({"buffer_command_message": command_message, "buffer_inline_message": _message})
     # =========
   for symbol in incorrect_symbols:
@@ -304,7 +305,7 @@ async def getting_new_employment(message: types.Message, state: FSMContext):
       await asyncio.sleep(0.5)
       await message.answer(text=f"Пожалуйста перефразируйте название вашего вида занятия, без использования недопустимого символа!\n\nСписок запрещенных символов в названии рода деятельности, можно с помощью команды:\n/incorrect_symbols")
       # Пересылаем обратно сообщение с inline кнопкой "отмена", после всего контента
-      _message = await message.answer(text='Введите новое занятие, для добавления его в список', reply_markup=setInlineKeyboard(InlineKeyboardButton(text='Отмена', callback_data=command_message_id)))
+      _message = await message.answer(text='Введите новое занятие, для добавления его в список', reply_markup=setInlineKeyboard(InlineKeyboardButton(text='Отмена ⛔️', callback_data=command_message_id)))
       return await state.set_data({"buffer_command_message": command_message, "buffer_inline_message": _message})
   await ClientStatesGroup.Setting_new_employment.set()
   data = await state.get_data("current_message")
@@ -319,7 +320,7 @@ async def delete_employment(message: types.Message):
   await ClientStatesGroup.Deleteing_employment.set()
   InlineKeyboardButtons = await main_functions.get_employment_list(user_id=message.from_user.id, mode=2)
   if InlineKeyboardButtons:
-    InlineKeyboardButtons.append(InlineKeyboardButton(text="Отмена", callback_data=f"break-{message.message_id}"))
+    InlineKeyboardButtons.append(InlineKeyboardButton(text="Отмена ⛔️", callback_data=f"break-{message.message_id}"))
     await message.answer(text="Выберите нужную запись для удаления", reply_markup=setInlineKeyboard(InlineKeyboardButtons, mode=2))
     _message = await message.answer(text='Удаление клавиатуры...', reply_markup=removeKeyboard())
     await asyncio.sleep(0.1)
@@ -413,7 +414,7 @@ async def callback_onSetting_new_employment(callback: types.CallbackQuery, state
     await bot.send_message(callback.from_user.id, text="Ожидание ввода...", reply_markup=getKeyboard(keyboardButtons, mode=2))
     return await ClientStatesGroup.Recording_time.set()
   
-  elif callback["message"]["reply_markup"]["inline_keyboard"][0][0]["text"] != "Отмена":
+  elif callback["message"]["reply_markup"]["inline_keyboard"][0][0]["text"] != "Отмена ⛔️":
     # Удаление сообщения с inline-кнопкой
     chat_id = callback.message.chat.id
     message_id = callback.message.message_id
@@ -524,4 +525,4 @@ async def on_shutdown(_):
     await main_functions.stopRecording(user_id=ADMIN_ID)
 
 if __name__ == "__main__":
-  executor.start_polling(dispatcher=dispatcher, skip_updates=True, on_startup=on_startup, on_shutdown=on_shutdown)
+  executor.start_polling(dispatcher=dispatcher, skip_updates=False, on_startup=on_startup, on_shutdown=on_shutdown)

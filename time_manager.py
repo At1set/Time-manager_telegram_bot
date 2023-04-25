@@ -8,7 +8,7 @@ from pytz import timezone
 async def write_data(user_id):
   if not os.path.exists(f'./data/users/{user_id}/data.json'):
     os.makedirs(f"./data/users/{user_id}/")
-    with open(f'./data/users/{user_id}/data.json', 'w', encoding="utf-8") as file:
+    with open(f'./data/users/{user_id}/data.json', 'w', encoding="utf-8-sig") as file:
       file.write('{}')
   if not os.path.exists(f"./data/users/{user_id}/Temp"):
     os.mkdir(f"./data/users/{user_id}/Temp")
@@ -49,13 +49,13 @@ async def get_employment_list(user_id, mode=1) -> KeyboardButton or InlineKeyboa
   user_properties = UserProperties(user_id, 1)
   default_employment_list = await user_properties.get("default_employment_list")
   if mode == 1 and default_employment_list:
-    with open('data/default/default_employment_list.txt', 'r', encoding="utf-8") as file:
+    with open('data/default/default_employment_list.txt', 'r', encoding="utf-8-sig") as file:
       data = file.readlines()
       for line in data:
         KeyboardButtons.append(KeyboardButton(f'{line}'))
 
   if os.path.exists(f'./data/users/{user_id}/employment_list.txt'):
-    with open(f'./data/users/{user_id}/employment_list.txt', 'r', encoding="utf-8") as file:
+    with open(f'./data/users/{user_id}/employment_list.txt', 'r', encoding="utf-8-sig") as file:
       data = file.readlines()
       if len(data) == 0 and mode != 1:
         return False
@@ -78,20 +78,20 @@ async def get_employment_list(user_id, mode=1) -> KeyboardButton or InlineKeyboa
 
 async def set_new_employment(user_id, employment):
   if not os.path.exists(f'./data/users/{user_id}/employment_list.txt'):
-    f = open(f"./data/users/{user_id}/employment_list.txt", "w", encoding="utf-8")
+    f = open(f"./data/users/{user_id}/employment_list.txt", "w", encoding="utf-8-sig")
     f.close()
   
-  with open('data/default/default_employment_list.txt', 'r', encoding="utf-8") as file:
+  with open('data/default/default_employment_list.txt', 'r', encoding="utf-8-sig") as file:
     data = file.readlines()
     for line in data:
       if employment + "\n" in data:
         return True
 
-  with open(f"./data/users/{user_id}/employment_list.txt", "r", encoding="utf-8") as file:
+  with open(f"./data/users/{user_id}/employment_list.txt", "r", encoding="utf-8-sig") as file:
     data = file.readlines()
     if employment + "\n" in data:
       return True
-    with open(f"./data/users/{user_id}/employment_list.txt", "w", encoding="utf-8") as file:
+    with open(f"./data/users/{user_id}/employment_list.txt", "w", encoding="utf-8-sig") as file:
       data.append(employment)
       for line in data:
         if line == "\n":
@@ -100,9 +100,9 @@ async def set_new_employment(user_id, employment):
   return False
 
 async def delete_employment_from_list(user_id, employment):
-  with open(f"./data/users/{user_id}/employment_list.txt", "r", encoding="utf-8") as file:
+  with open(f"./data/users/{user_id}/employment_list.txt", "r", encoding="utf-8-sig") as file:
     data = file.readlines()
-    with open(f"./data/users/{user_id}/employment_list.txt", "w", encoding="utf-8") as file:
+    with open(f"./data/users/{user_id}/employment_list.txt", "w", encoding="utf-8-sig") as file:
       for line in data:
         if line == "\n":
           continue
@@ -135,13 +135,13 @@ async def startRecording(user_id, employment, isMessageEdit=False):
   number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
   if number_of_jsonfile > 1:
     current_jsonfile = f"data_{number_of_jsonfile-1}.json"
-  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8") as file:
+  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8-sig") as file:
       data = json.load(file)
       count = 0
       for days in data:
         count += 1
       try:
-        with open(f'./data/users/{user_id}/{current_jsonfile}', 'w', encoding="utf-8") as file:
+        with open(f'./data/users/{user_id}/{current_jsonfile}', 'w', encoding="utf-8-sig") as file:
           _count = 1
           if not "1" in data:
             day = {}
@@ -193,7 +193,7 @@ async def startRecording(user_id, employment, isMessageEdit=False):
             if len(data) > 1 and current_week == 0:
               json.dump(data, file, indent=2, ensure_ascii=False)
               number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
-              with open(f'./data/users/{user_id}/data_{number_of_jsonfile}.json', 'w', encoding="utf-8") as file:
+              with open(f'./data/users/{user_id}/data_{number_of_jsonfile}.json', 'w', encoding="utf-8-sig") as file:
                 data = {}
                 data["1"] = {employment: [current_time]}
                 return json.dump(data, file, indent=2, ensure_ascii=False)
@@ -234,13 +234,13 @@ async def stopRecording(user_id):
   number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
   if number_of_jsonfile > 1:
     current_jsonfile = f"data_{number_of_jsonfile-1}.json"
-  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8") as file:
+  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8-sig") as file:
     data = json.load(file)
     count = 0
     for days in data:
       count += 1
     try:
-      with open(f'./data/users/{user_id}/{current_jsonfile}', 'w', encoding="utf-8") as file:
+      with open(f'./data/users/{user_id}/{current_jsonfile}', 'w', encoding="utf-8-sig") as file:
         if len(data) == 0:
           json.dump(data, file, indent=2, ensure_ascii=False)
           return False
@@ -279,7 +279,7 @@ async def stopRecording(user_id):
             data[f"{count + 1}"] = day
           json.dump(data, file, indent=2, ensure_ascii=False)
           number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
-          with open(f'./data/users/{user_id}/data_{number_of_jsonfile}.json', 'w', encoding="utf-8") as file:
+          with open(f'./data/users/{user_id}/data_{number_of_jsonfile}.json', 'w', encoding="utf-8-sig") as file:
             data = {}
             data["1"] = {employment: time_interval}
             json.dump(data, file, indent=2, ensure_ascii=False)
@@ -310,12 +310,12 @@ async def delete_employment_from_recording(user_id):
   number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
   if number_of_jsonfile > 1:
     current_jsonfile = f"data_{number_of_jsonfile-1}.json"
-  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8") as file:
+  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8-sig") as file:
     data = json.load(file)
     if len(data) == 0:
       json.dump(data, file, indent=2, ensure_ascii=False)
       return False
-    with open(f'./data/users/{user_id}/{current_jsonfile}', 'w', encoding="utf-8") as file:
+    with open(f'./data/users/{user_id}/{current_jsonfile}', 'w', encoding="utf-8-sig") as file:
       # переходим в ластовый день:
       last_day_number = list(data.keys())[-1]
       last_day = data[last_day_number]
@@ -374,7 +374,7 @@ async def get_day_info(user_id, day=0):
   number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
   if number_of_jsonfile > 1:
     current_jsonfile = f"data_{number_of_jsonfile-1}.json"
-  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8") as file:
+  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8-sig") as file:
     data = json.load(file)
     if len(data) == 0:
       return [False, False]

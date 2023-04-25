@@ -2,9 +2,12 @@ import asyncio
 import json
 import os
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
 from datetime import datetime
 
 from time_manager import calc_time
+
+rcParams['font.sans-serif'] = ['Arial Unicode MS']
 
 def luminance(hex_color):
   hex = hex_color.strip("#")
@@ -21,7 +24,7 @@ async def create_statistick(user_id, paint_over_between=False):
   if not os.path.exists(f'./data/users/{user_id}/{current_jsonfile}'):
     return False
   else:
-    with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8") as file:
+    with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8-sig") as file:
       data = json.load(file)
       if len(data) == 0:
         return False
@@ -72,7 +75,7 @@ async def create_statistick(user_id, paint_over_between=False):
   colors = ["#fd33d2", "#c8c49e", "#ec1300", "#2cc960", "#9fc926", "#5997e6", "#a8c2bc", "#f58642", "#72f499", "#4b113b", "#e6878a", "#c6e65d", "#c6e65d", "#3bf2e6", "#021b05", "#cf240f", "#dcf49d", "#b72fb2"]
   
   barh_left = 0
-  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8") as file:
+  with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8-sig") as file:
     data = json.load(file)
     curr_week_day = data["1"][list(data["1"].keys())[0]][0]
     date_object = datetime.strptime(curr_week_day, "%S-%M-%H-%d-%m-%Y")
