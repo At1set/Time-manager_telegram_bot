@@ -7,7 +7,7 @@ from datetime import datetime
 
 from time_manager import calc_time
 
-rcParams['font.sans-serif'] = ['Arial Unicode MS']
+# rcParams['font.sans-serif'] = ['Arial Unicode MS']
 
 def luminance(hex_color):
   hex = hex_color.strip("#")

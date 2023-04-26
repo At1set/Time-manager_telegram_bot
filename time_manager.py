@@ -195,8 +195,8 @@ async def startRecording(user_id, employment, isMessageEdit=False, isPreviousEmp
 
         _count = 1
         # Перенос на новый день // неделю
-        if len(day) != 0 and not isPreviousEmploymentWithoutEndTime:
-          # Получаем ласт employment
+        if len(day) != 0 and not isPreviousEmploymentWithoutEndTime: # Доделать, чтобы при isPreviousEmploymentWithoutEndTime
+          # Получаем ласт employment                                 # переходило в новую неделю // день
           last_employment = [*day][len(day)-1]
           current_week = current_time
           date_object = datetime.strptime(current_week, "%S-%M-%H-%d-%m-%Y")
@@ -206,7 +206,7 @@ async def startRecording(user_id, employment, isMessageEdit=False, isPreviousEmp
           if current_week == 0 and day[last_employment][1].split("-")[3] != current_time.split("-")[3]:
             json.dump(data, file, indent=2, ensure_ascii=False)
             # Получаем ластовый datajson file
-            number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-2
+            number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
             with open(f'./data/users/{user_id}/data_{number_of_jsonfile}.json', 'w', encoding="utf-8-sig") as file:
               data = {}
               data["1"] = {employment: [current_time]}
