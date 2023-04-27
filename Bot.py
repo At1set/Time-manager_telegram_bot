@@ -7,7 +7,7 @@ import os
 import asyncio
 
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ContentTypes, PreCheckoutQuery
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import StatesGroup, State
@@ -28,6 +28,7 @@ class ClientStatesGroup(StatesGroup):
   Getting_new_employment = State()
   Setting_new_employment = State()
   Deleteing_employment = State()
+  payment = State()
 
 # ===================================КЛАВИАТУРА====================================
 # Функция для применения клавы:
@@ -58,11 +59,31 @@ def setInlineKeyboard(InlineKeyboardButtons, mode=1) -> InlineKeyboardMarkup:
 
 
 # =============================ОБРАБОТЧИКИ КОМАНД БОТА=============================
+
 # Режим разработчика
 isDevelopment = False
 isDevelopment = True
 bot = Bot(API_DEVELOPMENT_TOKEN)
 dispatcher = Dispatcher(bot, storage=storage)
+
+#==============================MONEY==============================#
+
+@dispatcher.pre_checkout_query_handler(lambda q: True, state="*")
+async def pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
+  print("PRE_CHECKOUT_PAYMANT")
+  await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+
+@dispatcher.message_handler(content_types=types.ContentType.SUCCESSFUL_PAYMENT, state="*")
+async def seccessful_payment(message: types.Message):
+  total_amount = message.successful_payment.total_amount / 100
+  if os.path.exists("./data/donaters.txt"):
+    with open("./data/donaters.txt", "a", encoding="UTF-8-sig") as file:
+      file.write(f"\nfull_name:\"{message.from_user.full_name}\", id:{message.from_user.id}, username:\"{message.from_user.username}\", full_summ:{total_amount}")
+  await message.answer(text="Спасибо за поддержку! Благодаря вам я буду дальше развивать данный проект, чтобы им было еще комфортнее пользоваться!")
+  await asyncio.sleep(1)
+  await bot.send_sticker(chat_id=message.from_user.id, sticker="CAACAgIAAxkBAAEIvzdkSjBDufLgkvRK8sdtE7OmgrAv5QACchIAAkblqUjyTBtFPtcDUS8E")
+
+#==============================MONEY==============================#
 
 @dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
 async def allert(message: types.Message):
@@ -102,7 +123,7 @@ async def start(message: types.Message):
   await main_functions.write_data(message.from_user.id)
   await ClientStatesGroup.Start.set()
 
-@dispatcher.message_handler(commands=["help", "menu", "about", "info", "info_1", "info_2", "info_3", "info_4", "info_5", "info_6", "info_7", "start_task_recording", "options"], state=[ClientStatesGroup.Start, ClientStatesGroup.Wait, ClientStatesGroup.Recording_time, ClientStatesGroup.Recording_employment, ClientStatesGroup.Getting_new_employment, ClientStatesGroup.Setting_new_employment, ClientStatesGroup.Deleteing_employment])
+@dispatcher.message_handler(commands=["help", "menu", "about", "info", "info_1", "info_2", "info_3", "info_4", "info_5", "info_6", "info_7", "start_task_recording", "options", "donate"], state=[ClientStatesGroup.Start, ClientStatesGroup.Wait, ClientStatesGroup.Recording_time, ClientStatesGroup.Recording_employment, ClientStatesGroup.Getting_new_employment, ClientStatesGroup.Setting_new_employment, ClientStatesGroup.Deleteing_employment])
 async def commands(message: types.Message, state: FSMContext):
   if message.text == "/start_task_recording" or message.text == "/options" or message.text == "/help":
     curr_state = await state.get_state()
@@ -222,6 +243,14 @@ async def commands(message: types.Message, state: FSMContext):
       await bot.send_message(message.from_user.id, text=MESSAGE__OPTIONS, parse_mode="HTML", reply_markup=setInlineKeyboard(InlineKeyboardButtons=InlineKeyboardButton("Закрыть", callback_data=message.message_id)))
     else:
       await message.answer(text="Меню настроек нельзя вызывать в режиме записи. Если вам надо открыть настройки, выйдите из режима зависи с помощью:\n/exit")
+
+  elif (message.text == "/donate"):
+    await ClientStatesGroup.payment.set()
+    return await message.answer(text="Пожалуйста, выберите размер платежа.", reply_markup=setInlineKeyboard(InlineKeyboardButtons=[InlineKeyboardButton(text="Поддержать разработчика (100 руб.)", callback_data="100"),
+                                                                        InlineKeyboardButton(text="Мега поддержать разработчика (250 руб.)", callback_data="250"),
+                                                                        InlineKeyboardButton(text="Ультра поддержать разработчика (500 руб.)", callback_data="500"),
+                                                                        InlineKeyboardButton(text="Отмена", callback_data=f"exit-{message.message_id}")],
+                                                                        mode=2))
 
 @dispatcher.message_handler(state=ClientStatesGroup.StartOptions)
 async def starting_options(message: types.Message):
@@ -492,6 +521,44 @@ async def callback_onDeleteing_employment(callback: types.CallbackQuery):
     await asyncio.sleep(2)
     await bot.send_message(chat_id=callback.from_user.id, text="Ожидание ввода...", reply_markup=getKeyboard(keyboardButtons, mode=2))
     return await ClientStatesGroup.Recording_time.set()
+
+@dispatcher.callback_query_handler(state=ClientStatesGroup.payment)
+async def callback_onPayment(callback: types.CallbackQuery):
+  if "exit" in callback.data:
+    # Удаление сообщения с inline-кнопкой
+    chat_id = callback.message.chat.id
+    message_id = callback.message.message_id
+    await bot.delete_message(chat_id, message_id)
+
+    # Удаление сообщения с командой
+    message_id = callback.data.split("-")[1]
+    await bot.delete_message(chat_id, message_id)
+    return await ClientStatesGroup.Start.set()
+  else:
+    price = int(callback.data)
+    if price == 100:
+      price_label = "Поддержать разработчика"
+    elif price == 250:
+      price_label = "Мега поддержать разработчика"
+    else:
+      price_label = "Ультра поддержать разработчика"
+    chat_id = callback.message.chat.id
+    PPRICE = types.LabeledPrice(label=price_label, amount=100*price)
+    print(price, PPRICE)
+    return await bot.send_invoice(
+      chat_id=chat_id,
+      title=price_label,
+      description="Мяу",
+      provider_token=API_YOOKASSA_PAYMENT_TEST,
+      currency="RUB",
+      photo_url="https://i.pinimg.com/736x/f4/d2/96/f4d2961b652880be432fb9580891ed62.jpg",
+      photo_width=736,
+      photo_height=734,
+      photo_size=736,
+      is_flexible=False,
+      prices=[PPRICE],
+      start_parameter="support-payment",
+      payload="support-payment")
 
 async def send_alerts(message):
   users = os.listdir("./data/users")

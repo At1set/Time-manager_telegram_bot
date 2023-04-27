@@ -456,6 +456,6 @@ async def get_day_info(user_id, day=0):
 
 # Для разработки
 if __name__ == "__main__":
-  asyncio.run(startRecording(1925481166, "Отдых"))
+  # asyncio.run(startRecording(1925481166, "Отдых"))
   # asyncio.run(stopRecording(1925481166))
   pass
