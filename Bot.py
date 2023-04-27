@@ -70,8 +70,10 @@ isDevelopment = False
 
 @dispatcher.pre_checkout_query_handler(lambda q: True, state="*")
 async def pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
+  await ClientStatesGroup.Wait.set()
   print("PRE_CHECKOUT_PAYMANT")
   await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+  return await ClientStatesGroup.Start.set()
 
 @dispatcher.message_handler(content_types=types.ContentType.SUCCESSFUL_PAYMENT, state="*")
 async def seccessful_payment(message: types.Message):
@@ -81,7 +83,8 @@ async def seccessful_payment(message: types.Message):
       file.write(f"\nfull_name:\"{message.from_user.full_name}\", id:{message.from_user.id}, username:\"{message.from_user.username}\", full_summ:{total_amount}")
   await message.answer(text="Спасибо за поддержку! Благодаря вам я буду дальше развивать данный проект, чтобы им было еще комфортнее пользоваться!")
   await asyncio.sleep(1)
-  await bot.send_sticker(chat_id=message.from_user.id, sticker="CAACAgIAAxkBAAEIvzdkSjBDufLgkvRK8sdtE7OmgrAv5QACchIAAkblqUjyTBtFPtcDUS8E")
+  return await bot.send_sticker(chat_id=message.from_user.id, sticker="CAACAgIAAxkBAAEIvzdkSjBDufLgkvRK8sdtE7OmgrAv5QACchIAAkblqUjyTBtFPtcDUS8E")
+  
 
 #==============================MONEY==============================#
 
