@@ -62,9 +62,9 @@ def setInlineKeyboard(InlineKeyboardButtons, mode=1) -> InlineKeyboardMarkup:
 
 # Режим разработчика
 isDevelopment = False
-isDevelopment = True
-bot = Bot(API_DEVELOPMENT_TOKEN)
-dispatcher = Dispatcher(bot, storage=storage)
+# isDevelopment = True
+# bot = Bot(API_DEVELOPMENT_TOKEN)
+# dispatcher = Dispatcher(bot, storage=storage)
 
 #==============================MONEY==============================#
 
@@ -85,19 +85,19 @@ async def seccessful_payment(message: types.Message):
 
 #==============================MONEY==============================#
 
-@dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
-async def allert(message: types.Message):
-  with open("./data/blacklist.txt", "r") as file:
-    data = file.readlines()
-    for line in data:
-      if line == "\n":
-        continue
-      elif line.strip() == str(message.from_user.id):
-        return
-  await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
-  with open("./data/blacklist.txt", "a") as file:
-    file.write(f"\n{message.from_user.id}")
-  await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set", )
+# @dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
+# async def allert(message: types.Message):
+#   with open("./data/blacklist.txt", "r") as file:
+#     data = file.readlines()
+#     for line in data:
+#       if line == "\n":
+#         continue
+#       elif line.strip() == str(message.from_user.id):
+#         return
+#   await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
+#   with open("./data/blacklist.txt", "a") as file:
+#     file.write(f"\n{message.from_user.id}")
+#   await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set", )
 # Режим разработчика
 
 @dispatcher.message_handler(lambda message: message.text != "/start", state=[None])
