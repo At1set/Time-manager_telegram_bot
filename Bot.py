@@ -3,20 +3,28 @@ from visualizer import create_statistick
 from config import *
 from Api_token import *
 
+import string
+import random
 import os
 import asyncio
+from services.database import dataBase
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ContentTypes, PreCheckoutQuery
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import StatesGroup, State
+from aiogram.utils.callback_data import CallbackData
+
+from yoomoney import Quickpay, Client
 
 storage = MemoryStorage()
 PROXY_URL = "http://proxy.server:3128"
 bot = Bot(API_TOKEN, proxy=PROXY_URL)
 dispatcher = Dispatcher(bot, storage=storage)
 
+cb = CallbackData("btn", "action")
+db = dataBase(bd_user, bd_password, bd_host, bd_database)
 
 class ClientStatesGroup(StatesGroup):
   Start = State()
@@ -62,12 +70,12 @@ def setInlineKeyboard(InlineKeyboardButtons, mode=1) -> InlineKeyboardMarkup:
 
 # Режим разработчика
 isDevelopment = False
-# isDevelopment = True
-# bot = Bot(API_DEVELOPMENT_TOKEN)
-# dispatcher = Dispatcher(bot, storage=storage)
+isDevelopment = True
+bot = Bot(API_DEVELOPMENT_TOKEN)
+dispatcher = Dispatcher(bot, storage=storage)
 
 #==============================MONEY==============================#
-
+#================TG OFFICIAL================#
 @dispatcher.pre_checkout_query_handler(lambda q: True, state="*")
 async def pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
   await ClientStatesGroup.Wait.set()
@@ -84,30 +92,33 @@ async def seccessful_payment(message: types.Message):
   await message.answer(text="Спасибо за поддержку! Благодаря вам я буду дальше развивать данный проект, чтобы им было еще комфортнее пользоваться!")
   await asyncio.sleep(1)
   return await bot.send_sticker(chat_id=message.from_user.id, sticker="CAACAgIAAxkBAAEIvzdkSjBDufLgkvRK8sdtE7OmgrAv5QACchIAAkblqUjyTBtFPtcDUS8E")
-  
+#================TG OFFICIAL================#
+
+#================YOOMONEY===================#
+#================YOOMONEY===================#
 
 #==============================MONEY==============================#
 
-# @dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
-# async def allert(message: types.Message):
-#   with open("./data/blacklist.txt", "r") as file:
-#     data = file.readlines()
-#     for line in data:
-#       if line == "\n":
-#         continue
-#       elif line.strip() == str(message.from_user.id):
-#         return
-#   await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
-#   with open("./data/blacklist.txt", "a") as file:
-#     file.write(f"\n{message.from_user.id}")
-#   await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set", )
+@dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
+async def allert(message: types.Message):
+  with open("./data/blacklist.txt", "r") as file:
+    data = file.readlines()
+    for line in data:
+      if line == "\n":
+        continue
+      elif line.strip() == str(message.from_user.id):
+        return
+  await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
+  with open("./data/blacklist.txt", "a") as file:
+    file.write(f"\n{message.from_user.id}")
+  await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set", )
 # Режим разработчика
 
 @dispatcher.message_handler(lambda message: message.text != "/start", state=[None])
 async def hello(message: types.Message):
   await message.answer('Для того, чтобы начать, введи:\n/start')
 
-@dispatcher.message_handler(lambda message: message.text != "/exit", state=[ClientStatesGroup.Wait, ClientStatesGroup.Setting_new_employment, ClientStatesGroup.Recording_employment, ClientStatesGroup.Deleteing_employment])
+@dispatcher.message_handler(lambda message: message.text != "/exit", state=[ClientStatesGroup.Wait, ClientStatesGroup.Setting_new_employment, ClientStatesGroup.Recording_employment, ClientStatesGroup.Deleteing_employment, ClientStatesGroup.payment])
 async def waiting(message: types.Message):
   await message.delete()
 
@@ -249,11 +260,21 @@ async def commands(message: types.Message, state: FSMContext):
 
   elif (message.text == "/donate"):
     await ClientStatesGroup.payment.set()
-    return await message.answer(text="Пожалуйста, выберите размер платежа.", reply_markup=setInlineKeyboard(InlineKeyboardButtons=[InlineKeyboardButton(text="Поддержать разработчика (100 руб.)", callback_data="100"),
-                                                                        InlineKeyboardButton(text="Мега поддержать разработчика (250 руб.)", callback_data="250"),
-                                                                        InlineKeyboardButton(text="Ультра поддержать разработчика (500 руб.)", callback_data="500"),
-                                                                        InlineKeyboardButton(text="Отмена", callback_data=f"exit-{message.message_id}")],
+    
+    await message.answer(text="Пожалуйста, выберите способ оплаты", reply_markup=setInlineKeyboard(InlineKeyboardButtons=[
+                                                                        # InlineKeyboardButton(text="QIWI 🥝", callback_data="QIWI"),
+                                                                        InlineKeyboardButton(text="ЮMoney 👾", callback_data="ЮMoney"),
+                                                                        InlineKeyboardButton(text="Картой 💳", callback_data="Card"),
+                                                                        InlineKeyboardButton(text="Отмена", callback_data=f"exit-{message.message_id}")
+                                                                        ],
                                                                         mode=2))
+    return
+
+    # return await message.answer(text="Пожалуйста, выберите размер платежа.", reply_markup=setInlineKeyboard(InlineKeyboardButtons=[InlineKeyboardButton(text="Поддержать разработчика (100 руб.)", callback_data="100"),
+    #                                                                     InlineKeyboardButton(text="Мега поддержать разработчика (250 руб.)", callback_data="250"),
+    #                                                                     InlineKeyboardButton(text="Ультра поддержать разработчика (500 руб.)", callback_data="500"),
+    #                                                                     InlineKeyboardButton(text="Отмена", callback_data=f"exit-{message.message_id}")],
+    #                                                                     mode=2))
 
 @dispatcher.message_handler(state=ClientStatesGroup.StartOptions)
 async def starting_options(message: types.Message):
@@ -294,7 +315,7 @@ async def choice_employment(message: types.Message, state: FSMContext):
 @dispatcher.message_handler(commands=["set_new_employment"], state=[ClientStatesGroup.Recording_time])
 async def getting_new_employment_change_state(message: types.Message, state: FSMContext):
   await ClientStatesGroup.Getting_new_employment.set()
-  _message = await message.answer(text='Введите новое занятие, для добавления его в список', reply_markup=setInlineKeyboard(InlineKeyboardButton(text='Отмена ⛔️', callback_data=message.message_id)))
+  _message = await message.answer(text='Введите новое занятие, для добавления его в список', reply_markup=setInlineKeyboard(InlineKeyboardButton(text='Отмена', callback_data=message.message_id)))
   await state.set_data({"buffer_command_message": message, "buffer_inline_message": _message})
   _message = await message.answer(text='Удаление клавиатуры...', reply_markup=removeKeyboard())
   await asyncio.sleep(0.1)
@@ -318,7 +339,7 @@ async def getting_new_employment(message: types.Message, state: FSMContext):
       message_answer += f"\"{symbol}\" "
     await message.answer(text=f"Символы, которые запрещены в названии:\n{message_answer}")
     # Пересылаем обратно сообщение с inline кнопкой "отмена", после всего контента
-    _message = await message.answer(text='Введите новое занятие, для добавления его в список', reply_markup=setInlineKeyboard(InlineKeyboardButton(text='Отмена ⛔️', callback_data=command_message_id)))
+    _message = await message.answer(text='Введите новое занятие, для добавления его в список', reply_markup=setInlineKeyboard(InlineKeyboardButton(text='Отмена', callback_data=command_message_id)))
     return await state.set_data({"buffer_command_message": command_message, "buffer_inline_message": _message})
     # =========
   for symbol in incorrect_symbols:
@@ -337,7 +358,7 @@ async def getting_new_employment(message: types.Message, state: FSMContext):
       await asyncio.sleep(0.5)
       await message.answer(text=f"Пожалуйста перефразируйте название вашего вида занятия, без использования недопустимого символа!\n\nСписок запрещенных символов в названии рода деятельности, можно с помощью команды:\n/incorrect_symbols")
       # Пересылаем обратно сообщение с inline кнопкой "отмена", после всего контента
-      _message = await message.answer(text='Введите новое занятие, для добавления его в список', reply_markup=setInlineKeyboard(InlineKeyboardButton(text='Отмена ⛔️', callback_data=command_message_id)))
+      _message = await message.answer(text='Введите новое занятие, для добавления его в список', reply_markup=setInlineKeyboard(InlineKeyboardButton(text='Отмена', callback_data=command_message_id)))
       return await state.set_data({"buffer_command_message": command_message, "buffer_inline_message": _message})
   await ClientStatesGroup.Setting_new_employment.set()
   data = await state.get_data("current_message")
@@ -352,7 +373,7 @@ async def delete_employment(message: types.Message):
   await ClientStatesGroup.Deleteing_employment.set()
   InlineKeyboardButtons = await main_functions.get_employment_list(user_id=message.from_user.id, mode=2)
   if InlineKeyboardButtons:
-    InlineKeyboardButtons.append(InlineKeyboardButton(text="Отмена ⛔️", callback_data=f"break-{message.message_id}"))
+    InlineKeyboardButtons.append(InlineKeyboardButton(text="Отмена", callback_data=f"break-{message.message_id}"))
     await message.answer(text="Выберите нужную запись для удаления", reply_markup=setInlineKeyboard(InlineKeyboardButtons, mode=2))
     _message = await message.answer(text='Удаление клавиатуры...', reply_markup=removeKeyboard())
     await asyncio.sleep(0.1)
@@ -446,7 +467,7 @@ async def callback_onSetting_new_employment(callback: types.CallbackQuery, state
     await bot.send_message(callback.from_user.id, text="Ожидание ввода...", reply_markup=getKeyboard(keyboardButtons, mode=2))
     return await ClientStatesGroup.Recording_time.set()
   
-  elif callback["message"]["reply_markup"]["inline_keyboard"][0][0]["text"] != "Отмена ⛔️":
+  elif callback["message"]["reply_markup"]["inline_keyboard"][0][0]["text"] != "Отмена":
     # Удаление сообщения с inline-кнопкой
     chat_id = callback.message.chat.id
     message_id = callback.message.message_id
@@ -527,41 +548,124 @@ async def callback_onDeleteing_employment(callback: types.CallbackQuery):
 
 @dispatcher.callback_query_handler(state=ClientStatesGroup.payment)
 async def callback_onPayment(callback: types.CallbackQuery):
-  if "exit" in callback.data:
+  
+  if "exit" in callback.data or callback.data == "quit":
     # Удаление сообщения с inline-кнопкой
     chat_id = callback.message.chat.id
     message_id = callback.message.message_id
     await bot.delete_message(chat_id, message_id)
 
-    # Удаление сообщения с командой
-    message_id = callback.data.split("-")[1]
-    await bot.delete_message(chat_id, message_id)
-    return await ClientStatesGroup.Start.set()
-  else:
-    price = int(callback.data)
-    if price == 100:
-      price_label = "Поддержать разработчика"
-    elif price == 250:
-      price_label = "Мега поддержать разработчика"
+    if not callback.data == "quit":
+      # Удаление сообщения с командой
+      message_id = callback.data.split("-")[1]
+      await bot.delete_message(chat_id, message_id)
     else:
-      price_label = "Ультра поддержать разработчика"
-    chat_id = callback.message.chat.id
-    PPRICE = types.LabeledPrice(label=price_label, amount=100*price)
-    print(price, PPRICE)
-    return await bot.send_invoice(
-      chat_id=chat_id,
-      title=price_label,
-      description="Мяу",
-      provider_token=API_YOOKASSA_PAYMENT_TEST,
-      currency="RUB",
-      photo_url="https://i.pinimg.com/736x/f4/d2/96/f4d2961b652880be432fb9580891ed62.jpg",
-      photo_width=736,
-      photo_height=734,
-      photo_size=736,
-      is_flexible=False,
-      prices=[PPRICE],
-      start_parameter="support-payment",
-      payload="support-payment")
+      await db.update_label(user_id=chat_id, label=1)
+    return await ClientStatesGroup.Start.set()
+
+  elif callback.data == "Card":
+    await callback.answer("Извините, но в данный момент оплата картой не поддерживается! Пожалуйста, выберете другой способ оплаты.", show_alert=True)
+    # price = int(callback.data)
+    # if price == 100:
+    #   price_label = "Поддержать разработчика"
+    # elif price == 250:
+    #   price_label = "Мега поддержать разработчика"
+    # else:
+    #   price_label = "Ультра поддержать разработчика"
+    # chat_id = callback.message.chat.id
+    # PPRICE = types.LabeledPrice(label=price_label, amount=100*price)
+    # print(price, PPRICE)
+    # return await bot.send_invoice(
+    #   chat_id=chat_id,
+    #   title=price_label,
+    #   description="Мяу",
+    #   provider_token=API_YOOKASSA_PAYMENT_TEST,
+    #   currency="RUB",
+    #   photo_url="https://i.pinimg.com/736x/f4/d2/96/f4d2961b652880be432fb9580891ed62.jpg",
+    #   photo_width=736,
+    #   photo_height=734,
+    #   photo_size=736,
+    #   is_flexible=False,
+    #   prices=[PPRICE],
+    #   start_parameter="support-payment",
+    #   payload="support-payment")
+
+  elif callback.data == "ЮMoney" or callback.data == "back_to_payment":
+    letters_and_digits = string.ascii_lowercase + string.digits
+    rand_string = f"{callback.from_user.id}".join(random.sample(letters_and_digits, 10))
+    rand_string = "".join(random.sample(letters_and_digits, 10))
+    quickpay = Quickpay(
+      receiver='4100118185732942',
+      quickpay_form='shop',
+      targets='@At1sets_TimeManager_bot',
+      paymentType='SB',
+      sum=2,
+      label=rand_string
+    )
+
+    chat_id = callback.from_user.id
+    await db.add_user(user_id=callback.from_user.id, name=callback.from_user.full_name)
+    await db.update_label(user_id=chat_id, label=rand_string)
+    await bot.delete_message(chat_id=chat_id, message_id=callback.message.message_id)
+    return await bot.send_message(chat_id=chat_id, text="Готово, теперь вы можете оплатить по ссылке ниже! После оплаты, нажмите на кнопку \"Завершить олату\"", reply_markup=setInlineKeyboard(
+      InlineKeyboardButtons=[InlineKeyboardButton(text="Открыть форму", url=quickpay.redirected_url),
+                             InlineKeyboardButton(text="Завершить олату", callback_data="claim")],
+    mode=2))
+  
+
+  elif callback.data == "claim":
+    try:
+      data = await db.get_payment_status(user_id=callback.from_user.id)
+      isPayd = data[-1][0]
+      label = data[-1][1]
+      chat_id = callback.from_user.id
+      client = Client(API_YOOMONEY_PAYMENT)
+      history = client.operation_history(label=label)
+      operations = history.operations
+      if len(operations) > 0:
+        operation = operations[-1]
+        amount_sum = operation.amount
+        try:
+          if operation.status == "success":
+            await bot.edit_message_text(chat_id=chat_id, message_id=callback.message.message_id, text="Оплата прошла успешно!")
+            await db.update_label(user_id=chat_id, label='1')
+            await db.update_payment_status(user_id=chat_id)
+            await db.update_payment_count(user_id=chat_id)
+            await db.update_total_amount(user_id=chat_id, amount=amount_sum)
+            message = "Спасибо за поддержку! Благодаря вам я буду дальше развиваться, чтобы мною было еще комфортнее пользоваться!"
+            if isPayd:
+              message = "Ого, вы решили меня еще поддержать! Большое вам спасибо 😉 Я непременно вас запомню и, в дальнейшем выдам некоторые плюшки 🙈, только тссс!"
+            await bot.send_message(chat_id=chat_id, text=message)
+            await asyncio.sleep(1)
+            sticker="CAACAgIAAxkBAAEIvzdkSjBDufLgkvRK8sdtE7OmgrAv5QACchIAAkblqUjyTBtFPtcDUS8E"
+            if isPayd:
+              sticker = "CAACAgIAAxkBAAEIxz1kTTNPBgXBkkJmnsuxiBj79wzrjQAC2R8AAv2MKEpe539ds6rQhS8E"
+            await bot.send_sticker(chat_id=chat_id, sticker=sticker)
+            return await ClientStatesGroup.Start.set()
+          else:
+            return await bot.send_message(chat_id=chat_id, text="Вы еще не произвели платеж! Или же статус платежа еще обрабатывается.")
+        except:
+          return await bot.send_message(chat_id=chat_id, text="Произошла ошибка! Извините за предоставленные неудобства :(")
+      elif isPayd:
+        await bot.edit_message_text(chat_id=chat_id, message_id=callback.message.message_id, text="Завершить оплату -> вы уже являетесь Premium")
+        await bot.send_message(chat_id=chat_id, text="Еще раз cпасибо за поддержку! Мне действительно приятно :)")
+        await asyncio.sleep(1)
+        await bot.send_message(chat_id=chat_id, text="При желании, вы всегда можете поддержать меня неограниченное колличество раз.")
+        await asyncio.sleep(1)
+        await bot.send_sticker(chat_id=chat_id, sticker="CAACAgIAAxkBAAEIxyxkTSnLjHcab7Wu08tDHOHsMmVujAACiSIAAsSb6Us7ZFai5iiSfC8E")
+        return await ClientStatesGroup.Start.set()
+      else:
+        await callback.answer(text="Вы еще не отправляли платеж!", show_alert=True)
+        return await bot.edit_message_text(chat_id=chat_id, message_id=callback.message.message_id, text="Вернуться к оплате?",
+                                           reply_markup=setInlineKeyboard(InlineKeyboardButtons=[
+                                             InlineKeyboardButton(text="Вернуться", callback_data="back_to_payment"),
+                                             InlineKeyboardButton(text="Выйти", callback_data="quit")
+                                           ], mode=2))
+    except:
+      bot.send_message(chat_id=callback.from_user.id, text="Произошла ошибка!")
+
+  elif callback.data == "QIWI":
+    pass
 
 async def send_alerts(message):
   users = os.listdir("./data/users")
@@ -578,8 +682,9 @@ async def on_startup(_):
     message = "Меня починили!"
     return await send_alerts(message=message)
   else:
+    pass
     with open("./data/blacklist.txt", "w") as file:
-      file.close()
+      return file.close()
 
 async def on_shutdown(_):
   await bot.send_message(ADMIN_ID, text="bot down!", reply_markup=removeKeyboard())

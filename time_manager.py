@@ -15,6 +15,9 @@ async def write_data(user_id):
   if not os.path.exists(f"./data/users/{user_id}/properties.json"):
     with open(f"./data/users/{user_id}/properties.json", "w") as file:
       file.write('{}')
+  if not os.path.exists(f'./data/users/{user_id}/employment_list.txt'):
+    f = open(f"./data/users/{user_id}/employment_list.txt", "w", encoding="utf-8-sig")
+    f.close()
     return
   else:
     return
