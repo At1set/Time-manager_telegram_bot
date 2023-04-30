@@ -23,7 +23,7 @@ PROXY_URL = "http://proxy.server:3128"
 bot = Bot(API_TOKEN, proxy=PROXY_URL)
 dispatcher = Dispatcher(bot, storage=storage)
 
-cb = CallbackData("btn", "action")
+cb = CallbackData("btn", "payment_type", "message_id")
 db = dataBase(bd_user, bd_password, bd_host, bd_database)
 
 class ClientStatesGroup(StatesGroup):
@@ -36,6 +36,7 @@ class ClientStatesGroup(StatesGroup):
   Getting_new_employment = State()
   Setting_new_employment = State()
   Deleteing_employment = State()
+  payment_get_amount = State()
   payment = State()
 
 # ===================================КЛАВИАТУРА====================================
@@ -56,9 +57,12 @@ def removeKeyboard() -> ReplyKeyboardRemove:
 # INLINE KEYBOARD:
 def setInlineKeyboard(InlineKeyboardButtons, mode=1) -> InlineKeyboardMarkup:
   keyboard = InlineKeyboardMarkup()
+  if mode == 3:
+    keyboard = InlineKeyboardMarkup(inline_keyboard=InlineKeyboardButtons)
+    return keyboard
   if mode == 1:
     keyboard.add(InlineKeyboardButtons)
-  else:
+  elif mode == 2:
     for inlineButton in InlineKeyboardButtons:
       keyboard.add(inlineButton)
   return keyboard
@@ -70,9 +74,10 @@ def setInlineKeyboard(InlineKeyboardButtons, mode=1) -> InlineKeyboardMarkup:
 
 # Режим разработчика
 isDevelopment = False
-isDevelopment = True
-bot = Bot(API_DEVELOPMENT_TOKEN)
-dispatcher = Dispatcher(bot, storage=storage)
+# isDevelopment = True
+# bot = Bot(API_DEVELOPMENT_TOKEN)
+# dispatcher = Dispatcher(bot, storage=storage)
+# Режим разработчика
 
 #==============================MONEY==============================#
 #================TG OFFICIAL================#
@@ -99,24 +104,30 @@ async def seccessful_payment(message: types.Message):
 
 #==============================MONEY==============================#
 
-@dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
-async def allert(message: types.Message):
-  with open("./data/blacklist.txt", "r") as file:
-    data = file.readlines()
-    for line in data:
-      if line == "\n":
-        continue
-      elif line.strip() == str(message.from_user.id):
-        return
-  await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
-  with open("./data/blacklist.txt", "a") as file:
-    file.write(f"\n{message.from_user.id}")
-  await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set", )
 # Режим разработчика
+# @dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
+# async def allert(message: types.Message):
+#   with open("./data/blacklist.txt", "r") as file:
+#     data = file.readlines()
+#     for line in data:
+#       if line == "\n":
+#         continue
+#       elif line.strip() == str(message.from_user.id):
+#         return
+#   await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
+#   with open("./data/blacklist.txt", "a") as file:
+#     file.write(f"\n{message.from_user.id}")
+#   await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set", )
+# Режим разработчика
+
+
 
 @dispatcher.message_handler(lambda message: message.text != "/start", state=[None])
 async def hello(message: types.Message):
-  await message.answer('Для того, чтобы начать, введи:\n/start')
+  if not isDevelopment:
+    await message.answer('Для того, чтобы начать, введи:\n/start')
+  else:
+    return await ClientStatesGroup.Start.set()
 
 @dispatcher.message_handler(lambda message: message.text != "/exit", state=[ClientStatesGroup.Wait, ClientStatesGroup.Setting_new_employment, ClientStatesGroup.Recording_employment, ClientStatesGroup.Deleteing_employment, ClientStatesGroup.payment])
 async def waiting(message: types.Message):
@@ -263,9 +274,9 @@ async def commands(message: types.Message, state: FSMContext):
     
     await message.answer(text="Пожалуйста, выберите способ оплаты", reply_markup=setInlineKeyboard(InlineKeyboardButtons=[
                                                                         # InlineKeyboardButton(text="QIWI 🥝", callback_data="QIWI"),
-                                                                        InlineKeyboardButton(text="ЮMoney 👾", callback_data="ЮMoney"),
-                                                                        InlineKeyboardButton(text="Картой 💳", callback_data="Card"),
-                                                                        InlineKeyboardButton(text="Отмена", callback_data=f"exit-{message.message_id}")
+                                                                        InlineKeyboardButton(text="ЮMoney 👾", callback_data=f"btn:ЮMoney:{message.message_id}"),
+                                                                        InlineKeyboardButton(text="Картой 💳", callback_data=f"btn:Card:"),
+                                                                        InlineKeyboardButton(text="Отмена", callback_data=f"btn:exit:{message.message_id}")
                                                                         ],
                                                                         mode=2))
     return
@@ -275,6 +286,70 @@ async def commands(message: types.Message, state: FSMContext):
     #                                                                     InlineKeyboardButton(text="Ультра поддержать разработчика (500 руб.)", callback_data="500"),
     #                                                                     InlineKeyboardButton(text="Отмена", callback_data=f"exit-{message.message_id}")],
     #                                                                     mode=2))
+
+@dispatcher.message_handler(state=ClientStatesGroup.payment_get_amount)
+async def set_payment_amount(message: types.Message, state: FSMContext):
+  await ClientStatesGroup.Wait.set()
+  amount = message.text.strip()
+  try:
+    if not "," in amount:
+      amount = int(amount)
+    if "." in message.text or "," in message.text:
+      await message.delete()
+      message = await message.answer("Сумма должна быть целой!")
+      await asyncio.sleep(3)
+      await message.delete()
+      return await ClientStatesGroup.payment_get_amount.set()
+    if amount >= 15000:
+      await message.delete()
+      message = await message.answer("Ого, да вы богач! Но, к сожалению, сумма не должна быть столь большой (максимальная: 14 999)!")
+      await asyncio.sleep(3)
+      await message.delete()
+      return await ClientStatesGroup.payment_get_amount.set()
+    if amount < 25:
+      await message.delete()
+      message = await message.answer("К сожалению, минимальная сумма не должна быть меньше 25 рублей!")
+      await asyncio.sleep(3)
+      await message.delete()
+      return await ClientStatesGroup.payment_get_amount.set()
+  except:
+    await message.delete()
+    message = await message.answer(text=f'\"{message.text}\" не является числом! Пожалуйста, выберите сумму с помощью кнопок или же введите чилсо корректно.')
+    await asyncio.sleep(3)
+    await message.delete()
+    return await ClientStatesGroup.payment_get_amount.set()
+  
+  # Удаляем сообщение с ценой
+  await message.delete()
+
+  # Удаляем сообщение с кнопками выбора цены
+  inline_message_id = await state.get_data("inline_message_id")
+  inline_message_id = inline_message_id["inline_message_id"]
+  chat_id = message.from_user.id
+  await bot.delete_message(chat_id=chat_id, message_id=inline_message_id)
+
+  letters_and_digits = string.ascii_lowercase + string.digits
+  rand_string = f"{message.from_user.id}".join(random.sample(letters_and_digits, 10))
+  rand_string = "".join(random.sample(letters_and_digits, 10))
+
+  quickpay = Quickpay(
+    receiver='4100118185732942',
+    quickpay_form='shop',
+    targets='@At1sets_TimeManager_bot',
+    paymentType='SB',
+    sum=amount,
+    label=rand_string
+  )
+
+  await db.add_user(user_id=message.from_user.id, name=message.from_user.full_name)
+  await db.update_label(user_id=chat_id, label=rand_string)
+  await bot.send_message(chat_id=chat_id, text="Готово, теперь вы можете оплатить по ссылке ниже! После оплаты, нажмите на кнопку \"Завершить олату\"", reply_markup=setInlineKeyboard(
+    InlineKeyboardButtons=[InlineKeyboardButton(text="Открыть форму", url=quickpay.redirected_url),
+                           InlineKeyboardButton(text="Завершить олату", callback_data="claim")],
+  mode=2))
+  await state.reset_data()
+  await state.set_data({"total_amount": amount})
+  return await ClientStatesGroup.payment.set()
 
 @dispatcher.message_handler(state=ClientStatesGroup.StartOptions)
 async def starting_options(message: types.Message):
@@ -387,7 +462,7 @@ async def delete_employment(message: types.Message):
 
 
 # ===============================ОБРАБОТЧИК ВЫХОДОВ================================
-@dispatcher.message_handler(commands=["exit"], state=[ClientStatesGroup.Recording_time, ClientStatesGroup.Start, ClientStatesGroup.StartOptions])
+@dispatcher.message_handler(commands=["exit"], state=[ClientStatesGroup.Recording_time, ClientStatesGroup.Start, ClientStatesGroup.StartOptions, ClientStatesGroup.payment])
 async def exit_from_state(message: types.Message, state: FSMContext):
   curr_state = await state.get_state()
   await message.delete()
@@ -546,25 +621,90 @@ async def callback_onDeleteing_employment(callback: types.CallbackQuery):
     await bot.send_message(chat_id=callback.from_user.id, text="Ожидание ввода...", reply_markup=getKeyboard(keyboardButtons, mode=2))
     return await ClientStatesGroup.Recording_time.set()
 
-@dispatcher.callback_query_handler(state=ClientStatesGroup.payment)
-async def callback_onPayment(callback: types.CallbackQuery):
+@dispatcher.callback_query_handler(cb.filter(payment_type=['ЮMoney', 'Card', 'exit', "left_fast", "left_slow", "pass", "right_slow", "right_fast"]), state=[ClientStatesGroup.payment_get_amount, ClientStatesGroup.payment])
+async def callback_onGetPAymentAmount(callback: types.CallbackQuery, state: FSMContext):
+  curr_state = await state.get_state()
+  if curr_state == "ClientStatesGroup:payment":
+    await ClientStatesGroup.payment_get_amount.set()
+
+  prefix, payment_type, command_message_id = cb.parse(callback_data=callback.data).values()
+  chat_id = callback.from_user.id
+
+  if payment_type == "exit":
+    # Удаление сообщения с inline-кнопкой
+    message_id = callback.message.message_id
+    await bot.delete_message(chat_id, message_id)
+
+    # Удаление сообщения с командой
+    await bot.delete_message(chat_id, command_message_id)
+
+    await ClientStatesGroup.Start.set()
+    return await callback.answer('')
+
+  elif payment_type == "Card":
+    return await callback.answer("Извините, но в данный момент оплата картой не поддерживается! Пожалуйста, выберете другой способ оплаты.", show_alert=True)
   
-  if "exit" in callback.data or callback.data == "quit":
+  elif payment_type == "ЮMoney":
+    await bot.delete_message(chat_id=chat_id, message_id=callback.message.message_id)
+    inline_message_id = await bot.send_message(chat_id=chat_id, text="А теперь выберите или введите сумму сами.\n(минимальная сумма 25 рублей)",
+                           reply_markup=setInlineKeyboard(InlineKeyboardButtons=[
+                             [InlineKeyboardButton(text='⏪', callback_data=f'btn:left_fast:25-{command_message_id}'), InlineKeyboardButton(text='◀️', callback_data=f'btn:left_slow:25-{command_message_id}'), InlineKeyboardButton(text='25', callback_data=f'btn:pass:25-{command_message_id}'), InlineKeyboardButton(text='▶️', callback_data=f'btn:right_slow:25-{command_message_id}'), InlineKeyboardButton(text='⏩', callback_data=f'btn:right_fast:25-{command_message_id}')],
+                             [InlineKeyboardButton(text="Подтвердить", callback_data=f"btn:continue:{command_message_id}")],
+                             [InlineKeyboardButton(text="Отмена", callback_data=f"btn:exit:{command_message_id}")]
+                           ], mode=3))
+    await state.set_data({"inline_message_id": inline_message_id.message_id})
+  
+  elif payment_type == "left_fast" or payment_type == "left_slow" or payment_type == "pass" or payment_type == "right_slow" or payment_type == "right_fast":
+    amount, command_message_id = command_message_id.split('-')
+    amount = int(amount)
+    if payment_type == "pass":
+      return await callback.answer('')
+    if payment_type == "left_fast":
+      if amount > 50:
+        amount -= 50
+      else:
+        return await callback.answer('')
+    elif payment_type == "left_slow":
+      if amount > 25:
+        amount -= 25
+      else:
+        return await callback.answer('')
+    elif payment_type == "right_fast":
+      amount += 50
+    elif payment_type == "right_slow":
+      amount += 25
+
+    await bot.edit_message_reply_markup(chat_id=chat_id, message_id=callback.message.message_id,
+                           reply_markup=setInlineKeyboard(InlineKeyboardButtons=[
+                             [InlineKeyboardButton(text='⏪', callback_data=f'btn:left_fast:{amount}-{command_message_id}'), InlineKeyboardButton(text='◀️', callback_data=f'btn:left_slow:{amount}-{command_message_id}'), InlineKeyboardButton(text=f'{amount}', callback_data=f'btn:pass:{amount}-{command_message_id}'), InlineKeyboardButton(text='▶️', callback_data=f'btn:right_slow:{amount}-{command_message_id}'), InlineKeyboardButton(text='⏩', callback_data=f'btn:right_fast:{amount}-{command_message_id}')],
+                             [InlineKeyboardButton(text="Подтвердить", callback_data=f"btn:continue:{amount}")],
+                             [InlineKeyboardButton(text="Отмена", callback_data=f"btn:exit:{command_message_id}")]
+                           ], mode=3))
+    return await callback.answer('')
+
+@dispatcher.callback_query_handler(state=[ClientStatesGroup.payment, ClientStatesGroup.payment_get_amount])
+async def callback_onPayment(callback: types.CallbackQuery, state: FSMContext):
+  curr_state = await state.get_state()
+  isInit = False
+  if curr_state == "ClientStatesGroup:payment_get_amount":
+    prefix, data, amount = cb.parse(callback_data=callback.data).values()
+    if data == "continue":
+      await ClientStatesGroup.payment.set()
+      await state.set_data({"total_amount": amount})
+      await bot.delete_message(chat_id=callback.from_user.id, message_id=callback.message.message_id)
+      isInit = True
+
+  if callback.data == "quit":
     # Удаление сообщения с inline-кнопкой
     chat_id = callback.message.chat.id
     message_id = callback.message.message_id
     await bot.delete_message(chat_id, message_id)
 
-    if not callback.data == "quit":
-      # Удаление сообщения с командой
-      message_id = callback.data.split("-")[1]
-      await bot.delete_message(chat_id, message_id)
-    else:
-      await db.update_label(user_id=chat_id, label=1)
+    await db.update_label(user_id=chat_id, label=1)
     return await ClientStatesGroup.Start.set()
 
   elif callback.data == "Card":
-    await callback.answer("Извините, но в данный момент оплата картой не поддерживается! Пожалуйста, выберете другой способ оплаты.", show_alert=True)
+    pass
     # price = int(callback.data)
     # if price == 100:
     #   price_label = "Поддержать разработчика"
@@ -590,23 +730,33 @@ async def callback_onPayment(callback: types.CallbackQuery):
     #   start_parameter="support-payment",
     #   payload="support-payment")
 
-  elif callback.data == "ЮMoney" or callback.data == "back_to_payment":
+  elif callback.data == "ЮMoney" or callback.data == "back_to_payment" or isInit:
     letters_and_digits = string.ascii_lowercase + string.digits
     rand_string = f"{callback.from_user.id}".join(random.sample(letters_and_digits, 10))
     rand_string = "".join(random.sample(letters_and_digits, 10))
+    if not isInit:
+      try:
+        amount = await state.get_data("total_amount")
+        amount = amount["total_amount"]
+        amount = int(amount)
+      except:
+        await bot.send_message(chat_id=callback.from_user.id, text="Произошла ошибка!")
+        await ClientStatesGroup.Start.set()
+
     quickpay = Quickpay(
       receiver='4100118185732942',
       quickpay_form='shop',
       targets='@At1sets_TimeManager_bot',
       paymentType='SB',
-      sum=2,
+      sum=amount,
       label=rand_string
     )
 
     chat_id = callback.from_user.id
     await db.add_user(user_id=callback.from_user.id, name=callback.from_user.full_name)
     await db.update_label(user_id=chat_id, label=rand_string)
-    await bot.delete_message(chat_id=chat_id, message_id=callback.message.message_id)
+    if callback.data == "back_to_payment":
+      await bot.delete_message(chat_id=chat_id, message_id=callback.message.message_id)
     return await bot.send_message(chat_id=chat_id, text="Готово, теперь вы можете оплатить по ссылке ниже! После оплаты, нажмите на кнопку \"Завершить олату\"", reply_markup=setInlineKeyboard(
       InlineKeyboardButtons=[InlineKeyboardButton(text="Открыть форму", url=quickpay.redirected_url),
                              InlineKeyboardButton(text="Завершить олату", callback_data="claim")],
@@ -641,6 +791,7 @@ async def callback_onPayment(callback: types.CallbackQuery):
             if isPayd:
               sticker = "CAACAgIAAxkBAAEIxz1kTTNPBgXBkkJmnsuxiBj79wzrjQAC2R8AAv2MKEpe539ds6rQhS8E"
             await bot.send_sticker(chat_id=chat_id, sticker=sticker)
+            await state.reset_data()
             return await ClientStatesGroup.Start.set()
           else:
             return await bot.send_message(chat_id=chat_id, text="Вы еще не произвели платеж! Или же статус платежа еще обрабатывается.")
@@ -653,6 +804,7 @@ async def callback_onPayment(callback: types.CallbackQuery):
         await bot.send_message(chat_id=chat_id, text="При желании, вы всегда можете поддержать меня неограниченное колличество раз.")
         await asyncio.sleep(1)
         await bot.send_sticker(chat_id=chat_id, sticker="CAACAgIAAxkBAAEIxyxkTSnLjHcab7Wu08tDHOHsMmVujAACiSIAAsSb6Us7ZFai5iiSfC8E")
+        await state.reset_data()
         return await ClientStatesGroup.Start.set()
       else:
         await callback.answer(text="Вы еще не отправляли платеж!", show_alert=True)
@@ -662,7 +814,7 @@ async def callback_onPayment(callback: types.CallbackQuery):
                                              InlineKeyboardButton(text="Выйти", callback_data="quit")
                                            ], mode=2))
     except:
-      bot.send_message(chat_id=callback.from_user.id, text="Произошла ошибка!")
+      await bot.send_message(chat_id=callback.from_user.id, text="Произошла ошибка!")
 
   elif callback.data == "QIWI":
     pass
@@ -682,7 +834,6 @@ async def on_startup(_):
     message = "Меня починили!"
     return await send_alerts(message=message)
   else:
-    pass
     with open("./data/blacklist.txt", "w") as file:
       return file.close()
 
