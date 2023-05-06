@@ -74,9 +74,9 @@ def setInlineKeyboard(InlineKeyboardButtons, mode=1) -> InlineKeyboardMarkup:
 
 # Режим разработчика
 isDevelopment = False
-# isDevelopment = True
-# bot = Bot(API_DEVELOPMENT_TOKEN)
-# dispatcher = Dispatcher(bot, storage=storage)
+isDevelopment = True
+bot = Bot(API_DEVELOPMENT_TOKEN)
+dispatcher = Dispatcher(bot, storage=storage)
 # Режим разработчика
 
 #==============================MONEY==============================#
@@ -105,19 +105,20 @@ async def seccessful_payment(message: types.Message):
 #==============================MONEY==============================#
 
 # Режим разработчика
-# @dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
-# async def allert(message: types.Message):
-#   with open("./data/blacklist.txt", "r") as file:
-#     data = file.readlines()
-#     for line in data:
-#       if line == "\n":
-#         continue
-#       elif line.strip() == str(message.from_user.id):
-#         return
-#   await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
-#   with open("./data/blacklist.txt", "a") as file:
-#     file.write(f"\n{message.from_user.id}")
-#   await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set", )
+@dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
+async def allert(message: types.Message):
+  with open("./data/blacklist.txt", "r") as file:
+    data = file.readlines()bind "KP_MINUS" "voice_enable 0;playvol buttons\blip1 0.5"
+bind "KP_PLUS" "voice_enable 1;playvol buttons\blip1 0.5"
+    for line in data:
+      if line == "\n":
+        continue
+      elif line.strip() == str(message.from_user.id):
+        return
+  await message.answer('Бот сейчас находится на технической паузе. Извините за неудобства!')
+  with open("./data/blacklist.txt", "a") as file:
+    file.write(f"\n{message.from_user.id}")
+  await message.answer("Если у вас возникли какие-либо сложности, напишите создателю бота: https://t.me/At1set", )
 # Режим разработчика
 
 
@@ -145,7 +146,12 @@ async def start(message: types.Message):
   await asyncio.sleep(1.5)
   await bot.send_message(message.from_user.id, text=MESSAGE__HI, parse_mode="HTML",
                         reply_markup=setInlineKeyboard(InlineKeyboardButtons))
-  await main_functions.write_data(message.from_user.id)
+  isNewUser = await main_functions.write_data(message.from_user.id)
+  if isNewUser:
+    try:
+      await main_functions.send_allert_toAdminChat(send_message_func=bot.send_message, message=message, allert_title="НОВЫЙ ПОЛЬЗОВАТЕЛЬ", allert="присоединился к нам!")
+    except:
+      print('Ошибка в отправке уведомлении о новом пользователе!')
   await ClientStatesGroup.Start.set()
 
 @dispatcher.message_handler(commands=["help", "menu", "about", "info", "info_1", "info_2", "info_3", "info_4", "info_5", "info_6", "info_7", "start_task_recording", "options", "donate"], state=[ClientStatesGroup.Start, ClientStatesGroup.Wait, ClientStatesGroup.Recording_time, ClientStatesGroup.Recording_employment, ClientStatesGroup.Getting_new_employment, ClientStatesGroup.Setting_new_employment, ClientStatesGroup.Deleteing_employment])
@@ -271,6 +277,11 @@ async def commands(message: types.Message, state: FSMContext):
 
   elif (message.text == "/donate"):
     await ClientStatesGroup.payment.set()
+
+    try:
+      await main_functions.send_allert_toAdminChat(send_message_func=bot.send_message, message=message, allert_title="ДОНАТ", allert="нажал на кнопку donate!")
+    except:
+      print('Ошибка в отправке уведомлении о нажатии кнопки donate!')
     
     await message.answer(text="Пожалуйста, выберите способ оплаты", reply_markup=setInlineKeyboard(InlineKeyboardButtons=[
                                                                         # InlineKeyboardButton(text="QIWI 🥝", callback_data="QIWI"),
@@ -642,7 +653,7 @@ async def callback_onGetPAymentAmount(callback: types.CallbackQuery, state: FSMC
     return await callback.answer('')
 
   elif payment_type == "Card":
-    return await callback.answer("Извините, но в данный момент оплата картой не поддерживается! Пожалуйста, выберете другой способ оплаты.", show_alert=True)
+    return await callback.answer("Извините, но в данный момент оплата картой не поддерживается! Пожалуйста, выберете другой способ оплаты.\nP.S. Сервис ЮMoney поддерживает (МИР, UnionPay, Mastercard, Visa, Maestro)", show_alert=True)
   
   elif payment_type == "ЮMoney":
     await bot.delete_message(chat_id=chat_id, message_id=callback.message.message_id)
@@ -701,6 +712,10 @@ async def callback_onPayment(callback: types.CallbackQuery, state: FSMContext):
     await bot.delete_message(chat_id, message_id)
 
     await db.update_label(user_id=chat_id, label=1)
+    try:
+      await main_functions.send_allert_toAdminChat(send_message_func=bot.send_message, message=message, allert_title="ОТМЕНА ДОНАТА", allert="Посмотрел, че делает кнопка \"Donate\" и ушел(!")
+    except:
+      print('Произошла ошибка при уведомлении об успешной оплате пользователем!')
     return await ClientStatesGroup.Start.set()
 
   elif callback.data == "Card":
@@ -777,6 +792,10 @@ async def callback_onPayment(callback: types.CallbackQuery, state: FSMContext):
         amount_sum = operation.amount
         try:
           if operation.status == "success":
+            try:
+              await main_functions.send_allert_toAdminChat(send_message_func=bot.send_message, message=message, allert_title="ДОНАТ", allert="Успешно тебе задонатил!")
+            except:
+              print('Произошла ошибка при уведомлении об успешной оплате пользователем!')
             await bot.edit_message_text(chat_id=chat_id, message_id=callback.message.message_id, text="Оплата прошла успешно!")
             await db.update_label(user_id=chat_id, label='1')
             await db.update_payment_status(user_id=chat_id)
@@ -814,6 +833,10 @@ async def callback_onPayment(callback: types.CallbackQuery, state: FSMContext):
                                              InlineKeyboardButton(text="Выйти", callback_data="quit")
                                            ], mode=2))
     except:
+      try:
+        await main_functions.send_allert_toAdminChat(send_message_func=bot.send_message, message=message, allert_title="ДОНАТ", allert="Произошла ошибка при оплате у данного пользователя!")
+      except:
+        print('Произошла ошибка при уведомлении об ошибке оплаты у бота!')
       await bot.send_message(chat_id=callback.from_user.id, text="Произошла ошибка!")
 
   elif callback.data == "QIWI":
@@ -841,7 +864,7 @@ async def on_shutdown(_):
   await bot.send_message(ADMIN_ID, text="bot down!", reply_markup=removeKeyboard())
   global isDevelopment
   if not isDevelopment:
-    message = "Бот отключен. Вероятнее всего, он находится на технической паузе, приймите извинения за неудобства!"
+    message = "Бот отключен. Вероятнее всего, он находится на технической паузе, примите извинения за неудобства!"
     # Останавливаем все занятия
     users = os.listdir("./data/users")
     for user in users:

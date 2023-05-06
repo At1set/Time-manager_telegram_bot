@@ -5,8 +5,12 @@ import json
 from datetime import datetime
 from pytz import timezone
 
+from Api_token import ADMIN_CHAT_ID
+
 async def write_data(user_id):
+  isNewUser = False
   if not os.path.exists(f'./data/users/{user_id}/data.json'):
+    isNewUser = True
     os.makedirs(f"./data/users/{user_id}/")
     with open(f'./data/users/{user_id}/data.json', 'w', encoding="utf-8-sig") as file:
       file.write('{}')
@@ -18,9 +22,17 @@ async def write_data(user_id):
   if not os.path.exists(f'./data/users/{user_id}/employment_list.txt'):
     f = open(f"./data/users/{user_id}/employment_list.txt", "w", encoding="utf-8-sig")
     f.close()
-    return
-  else:
-    return
+  return isNewUser
+
+# Функция отправки уведомлений админу:
+async def send_allert_toAdminChat(send_message_func, message, allert, allert_title):
+  userID = message.from_user.id
+  userFULLNAME = "https://t.me/" + message.from_user.username if message.from_user.username != None else message.from_user.full_name
+  userURL = message.from_user.url
+  result_message = f'{allert_title}\nПользователь {userFULLNAME} id:{userID}, url:{userURL}\n\n{allert}'
+  
+  await send_message_func(chat_id=ADMIN_CHAT_ID, text=result_message)
+
 
 class UserProperties:
   def __init__(self, user_id, default_value):

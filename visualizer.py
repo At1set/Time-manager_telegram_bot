@@ -77,7 +77,7 @@ async def create_statistick(user_id, paint_over_between=False):
   barh_left = 0
   with open(f'./data/users/{user_id}/{current_jsonfile}', 'r', encoding="utf-8-sig") as file:
     data = json.load(file)
-    curr_week_day = data["1"][list(data["1"].keys())[0]][0]
+    curr_week_day = data["1"][list(data["1"].keys())[0]][1]
     date_object = datetime.strptime(curr_week_day, "%S-%M-%H-%d-%m-%Y")
     curr_week_day = date_object.weekday()
 
@@ -127,6 +127,11 @@ async def create_statistick(user_id, paint_over_between=False):
         result_hours = time_interval/3600
         if stopTime_day != startTime_day and number_of_employment == 0: # Отнимаем разницу при переходе на новый день
           result_hours -= limit_different
+          if result_hours < 0:
+            continue
+          result_seconds = int(result_hours*3600)
+          difference_hours, difference_min = divmod(result_seconds, 3600)
+          difference_min, difference_sec = divmod(difference_min, 60)
 
         barh_width = result_hours
         barh_height = 0.8
@@ -179,9 +184,9 @@ async def create_statistick(user_id, paint_over_between=False):
             plt.bar_label(bar, label_type="center", zorder=10, labels=[f"{difference_hours}ч"], color=label_color, fontweight="bold")
   
   if len(legend_labels) < 5:
-    plt.legend(loc="upper center", bbox_to_anchor=(0.45, 1.13), ncol=10, framealpha = 0.1, shadow = True, borderpad = 1.1, fancybox = True)
+    plt.legend(loc="upper center", bbox_to_anchor=(0.45, 1.13), ncol=8, framealpha = 0.1, shadow = True, borderpad = 1.1, fancybox = True)
   else:
-    plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.13), ncol=10, framealpha = 0.1, shadow = True, borderpad = 1.1, fancybox = True)
+    plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.13), ncol=8, framealpha = 0.1, shadow = True, borderpad = 1.1, fancybox = True)
 
   plt.plot()
   plt.savefig(f"./data/users/{user_id}/Temp/statistic.jpg", dpi=340)
