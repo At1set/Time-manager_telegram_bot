@@ -108,8 +108,7 @@ async def seccessful_payment(message: types.Message):
 @dispatcher.message_handler(lambda message: message.from_user.id != ADMIN_ID)
 async def allert(message: types.Message):
   with open("./data/blacklist.txt", "r") as file:
-    data = file.readlines()bind "KP_MINUS" "voice_enable 0;playvol buttons\blip1 0.5"
-bind "KP_PLUS" "voice_enable 1;playvol buttons\blip1 0.5"
+    data = file.readlines()
     for line in data:
       if line == "\n":
         continue
