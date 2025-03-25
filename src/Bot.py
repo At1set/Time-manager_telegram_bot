@@ -712,7 +712,7 @@ async def callback_onPayment(callback: types.CallbackQuery, state: FSMContext):
 
     await db.update_label(user_id=chat_id, label=1)
     try:
-      await main_functions.send_allert_toAdminChat(send_message_func=bot.send_message, message=message, allert_title="ОТМЕНА ДОНАТА", allert="Посмотрел, че делает кнопка \"Donate\" и ушел(!")
+      await main_functions.send_allert_toAdminChat(send_message_func=bot.send_message, message=message, allert_title="ОТМЕНА ДОНАТА", allert="Посмотрел, че делает кнопка \"Donate\" и ушел!")
     except:
       print('Произошла ошибка при уведомлении об успешной оплате пользователем!')
     return await ClientStatesGroup.Start.set()

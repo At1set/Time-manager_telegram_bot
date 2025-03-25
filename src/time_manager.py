@@ -216,21 +216,25 @@ async def startRecording(user_id, employment, isMessageEdit=False, isPreviousEmp
           current_week = current_time
           date_object = datetime.strptime(current_week, "%S-%M-%H-%d-%m-%Y")
           current_week = date_object.weekday()
-          current_week = 0
-
-          if current_week == 0 and day[last_employment][1].split("-")[3] != current_time.split("-")[3]:
-            json.dump(data, file, indent=2, ensure_ascii=False)
-            # Получаем ластовый datajson file
-            number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
-            with open(f'./data/users/{user_id}/data_{number_of_jsonfile}.json', 'w', encoding="utf-8-sig") as file:
-              data = {}
-              data["1"] = {employment: [current_time]}
+          last_employment_week = day[last_employment][1]
+          date_object = datetime.strptime(last_employment_week, "%S-%M-%H-%d-%m-%Y")
+          last_employment_week = date_object.weekday()
+          print(last_employment_week)
+          
+              # Если ращличаются месяцы                                                       Если понедельник                                                                                   если день недели уже был или такой же                 если день недели не был и дни различаются на 7 дней
+          if (day[last_employment][1].split("-")[4] != current_time.split("-")[4]) or (current_week == 0 and day[last_employment][1].split("-")[3] != current_time.split("-")[3]) or (current_week <= last_employment_week) or (current_week > last_employment_week and int(current_time.split("-")[3]) - int(day[last_employment][1].split("-")[3]) >= 7):
+            # Отсекаем момент текущего дня, когда день недели один и тот же
+            if not (current_week == last_employment_week and day[last_employment][1].split("-")[3] == current_time.split("-")[3]):
               json.dump(data, file, indent=2, ensure_ascii=False)
-              return True
-
+              # Получаем ластовый datajson file
+              number_of_jsonfile = len(os.listdir(f"./data/users/{user_id}/"))-3
+              with open(f'./data/users/{user_id}/data_{number_of_jsonfile}.json', 'w', encoding="utf-8-sig") as file:
+                data = {}
+                data["1"] = {employment: [current_time]}
+                json.dump(data, file, indent=2, ensure_ascii=False)
+                return True
           
           if not isMessageEdit and day[last_employment][1].split("-")[3] != current_time.split("-")[3]:
-            print(1)
             last_day = len(data)
             data[last_day+1] = {employment: [current_time]}
             json.dump(data, file, indent=2, ensure_ascii=False)
@@ -310,7 +314,6 @@ async def stopRecording(user_id):
 
         date_object = datetime.strptime(stop_week_day, "%S-%M-%H-%d-%m-%Y")
         stop_week_day = date_object.weekday()
-        stop_week_day = 0
 
         if len(data) > 1 and stop_week_day == 0:
           print(len(data))
@@ -473,4 +476,5 @@ async def get_day_info(user_id, day=0):
 if __name__ == "__main__":
   # asyncio.run(startRecording(1925481166, "Отдых"))
   # asyncio.run(stopRecording(1925481166))
+
   pass
